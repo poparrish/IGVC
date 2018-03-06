@@ -17,6 +17,9 @@ class wheelControl {
   bool forwardBackward;
   bool backToZero;
   int cutoff;
+  float hubPerror, hubIerror, hubDerror;
+  float hubKp, hubKi, hubKd;
+  float lasthubPerror;
   
   // inits for planetary motor
 

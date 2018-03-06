@@ -440,7 +440,7 @@ void setup() {
   
 
   
-  Serial.begin(250000); // sets up a serial interface to print to the monitor for debugging
+  Serial.begin(115200); // sets up a serial interface to print to the monitor for debugging
   
   Serial.println("123");
   interrupts();  //Allows for intrrupts to call their associated methods
