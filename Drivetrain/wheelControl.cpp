@@ -58,41 +58,30 @@ returnVariables wheelControl::calculate(float newDesiredRPM, float desiredAngle,
     Serial.println(encPos);
 */
 
-    
-  if(((newDesiredRPM < 0) && (curRPM > 0)) || ((newDesiredRPM > 0) && (curRPM <0))){
-      newDesiredRPM = 0;
+    if (newDesiredRPM < 0)
+    {
+      if (lastDesiredRPM > 0) {
+        // current negative new positive
+        desiredRPM = 0;
+      }
+      else {
+        // current negative new negative
+        forwardBackward = LOW;
+        desiredRPM *= newDesiredRPM < 0 ? -1 : 1; 
+      }
     }
-    else if(newDesiredRPM < 0){
-      forwardBackward = HIGH;
-    }
-    else if(newDesiredRPM > 0){
-      forwardBackward = LOW;
+    else {
+      if (lastDesiredRPM < 0) {
+        desiredRPM = 0; 
+      }
+      else {
+        desiredRPM = newDesiredRPM;
+        forwardBackward = HIGH;
+      }
     }
 
-    
-//    if (newDesiredRPM < 0)
-//    {
-//      if (lastDesiredRPM > 0) {
-//        desiredRPM = 0;
-//        
-//
-//      }
-//      else {
-//        forwardBackward = HIGH;
-//        desiredRPM = -1 * newDesiredRPM; //This is to make the rpm positive for PWM calc
-//      }
-//    }
-//    else {
-//      if (lastDesiredRPM < 0) {
-//        desiredRPM = 0;
-//        
-//      }
-//      else {
-//        desiredRPM = newDesiredRPM;
-//        forwardBackward = LOW;
-//      }
-//    }
-
+    Serial.print("desiredRPM: ");
+    Serial.println(desiredRPM);
     lastDesiredRPM = newDesiredRPM;
 
   /* 
@@ -137,7 +126,7 @@ returnVariables wheelControl::calculate(float newDesiredRPM, float desiredAngle,
 
     hubKp = 1.5;
     hubKd = 1;
-    hubKi = .2;
+   // hubKi = .2;
 
     hubPerror = desiredRPM - curRPM;
     Serial.print("hubPerror: ");
@@ -145,73 +134,38 @@ returnVariables wheelControl::calculate(float newDesiredRPM, float desiredAngle,
     hubDerror = hubPerror - lasthubPerror;
     Serial.print("hubDerror: ");
     Serial.println(hubDerror);
+    /*
     if(curRPM > 50){
       hubIerror += hubPerror;
     }else{
       hubIerror = 0;
-    }
-    Serial.print("hubIerror: ");
-    Serial.println(hubIerror);
-    speedCheckfloat = (hubKp * hubPerror) + (hubKd * hubDerror) + (hubKi * hubIerror);
-    Serial.print("Speedcheckfloat: ");
-    Serial.println(speedCheckfloat);
+    }*/
+   // Serial.print("hubIerror: ");
+    //Serial.println(hubIerror);
+    speedCheckfloat = (hubKp * hubPerror) + (hubKd * hubDerror);// + (hubKi * hubIerror);
+   // Serial.print("Speedcheckfloat: ");
+    //Serial.println(speedCheckfloat);
     speedCheck = (int)speedCheckfloat + (int)lastCycleSpeedCheck;
     speedCheck = constrain(speedCheck, 0 , 254);
     Serial.print("speedcheck: ");
     Serial.println(speedCheck);
-    
 
+    if(desiredRPM == 0){
+      speedCheck = 0;
+    }
    
     lasthubPerror = hubPerror;
     
-//    if ((avgDeltaTime > 1000)or (backToZero) or (RPMerror > 40.0) or (RPMerror < -15.0)) {
-//      if (RPMerror > 0) {
-//         speedCheckfloat = ((desiredRPM * 0.9) + 7) * 0.9; //these numbers came from testing on the stand
-//      }
-//      else {
-//         speedCheckfloat = ((desiredRPM * 0.9) + 7) * 1.1; // thesenumbers came from testing on the stand
-//      }
-//    }else {
-//      speedCheckfloat =  RPMerror * Pgain + DerRPMerror * Dgain; 
-//    }
-//    if (desiredRPM <= cutoff) {
-//      speedCheckfloat = 0;      
-//    }
-//
-//    
-//     lastDesiredRPM = desiredRPM;
-//     lastcycleRPM = curRPM;
-//
-//// Limit the PWM output to 0 to 255.
-//   
-//    if (speedCheckfloat >= 254) {
-//      speedCheckfloat = 254.0;
-//    }
-//     if (speedCheckfloat < -0.5) {
-//      speedCheckfloat = -0.5;
-//      
-//    }
-//    
-//    lastCycleSpeedCheck = speedCheckfloat;
-//    
-//// this will round the float version to the integer version of the variable.
-//    if(desiredRPM != 0 ){
-//    speedCheck = (long)(speedCheckfloat + 0.5);
-//    }
-//  speedCheck = (long)speedCheckfloat;
+
 
 /*
  * THis is the logic for the planetary motor - setting the angle of the wheel
  */
 
     deltaEncPos = (float)(encPos - lastEncPos); // change in encoder position is used for RPM
-//    Serial.print("encPos: ");
-//    Serial.println(encPos);
-//    Serial.print("deltaEncPos: ");
-//    Serial.println(deltaEncPos);
+
     currentPlanMotPos = lastPlanMotPos + (deltaEncPos * 360.0 / cyclesPerRot);  //calculates current position of wheel
-//    Serial.print("currentPlanMotPos: ");
-//    Serial.println(currentPlanMotPos);
+
     // We need to keep the angle between +- 180 deg
     
     if (currentPlanMotPos > 180.0) {

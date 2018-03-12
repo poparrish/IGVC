@@ -47,6 +47,7 @@ struct parsedCmd zeroParsedWheel(int wheelnum)
   return newWheel;
 }
 
+// parses user input
 struct parsedCmd parseRxCmd(String inputString)
 {
   parsedCmd toReturn;
@@ -571,37 +572,23 @@ void loop() {
                                   lastInterruptTimeWheel3, encoderPosWheel3);
 
 
-    //create temp floats to store last value so that new data is only sent to the wheels once (no repeat)
 
-    // if it changes to something above 50
-     if((returnVariablesWheel0.speedCheck != tempSpeedCheck0) && (returnVariablesWheel0.speedCheck > 50.0)){
        analogWrite(power0, LOW);
        analogWrite(vrPinWheel0, returnVariablesWheel0.speedCheck);
        digitalWrite(zfPinWheel0, returnVariablesWheel0.forwardBackward);
-       writeCount++;
-       tempSpeedCheck0 = returnVariablesWheel0.speedCheck;
-     }
-     if((returnVariablesWheel1.speedCheck != tempSpeedCheck1) && (returnVariablesWheel1.speedCheck > 50.0)){
+     
        analogWrite(power1, LOW);
        analogWrite(vrPinWheel1, returnVariablesWheel1.speedCheck);
        digitalWrite(zfPinWheel1, returnVariablesWheel1.forwardBackward);
-       writeCount++;
-       tempSpeedCheck1 = returnVariablesWheel1.speedCheck;
-     }
-     if((returnVariablesWheel2.speedCheck != tempSpeedCheck2) && (returnVariablesWheel2.speedCheck > 50.0)){
-      analogWrite(power2, LOW);
+
+       analogWrite(power2, LOW);
        analogWrite(vrPinWheel2, returnVariablesWheel2.speedCheck);
        digitalWrite(zfPinWheel2, returnVariablesWheel2.forwardBackward);
-       writeCount++;
-       tempSpeedCheck2 = returnVariablesWheel2.speedCheck;
-     }
-     if((returnVariablesWheel3.speedCheck != tempSpeedCheck3) && (returnVariablesWheel3.speedCheck > 50.0)){
-      analogWrite(power3, LOW);
+
+       analogWrite(power3, LOW);
        analogWrite(vrPinWheel3, returnVariablesWheel3.speedCheck);
        digitalWrite(zfPinWheel3, returnVariablesWheel3.forwardBackward);
-       writeCount++;
-       tempSpeedCheck3 = returnVariablesWheel3.speedCheck;
-     }
+
 
      //if it changes to 0
      if((returnVariablesWheel0.speedCheck != tempSpeedCheck0) && (returnVariablesWheel0.speedCheck < 50.0)){
