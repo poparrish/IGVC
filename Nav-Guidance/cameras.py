@@ -37,6 +37,7 @@
 ## to the 'chatter' topic
 
 import rospy
+from camera_msg import CameraMsg
 from std_msgs.msg import String
 
 def talker():
