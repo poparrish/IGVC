@@ -22,7 +22,7 @@ int16_t oldData = 1;
 typedef struct package Package;
 Package data;
 
-int IN1 = 4;
+int IN1 = 24;
 int IN2 = 5;
 
 #define ON 0
@@ -42,7 +42,6 @@ void setup()
   myRadio.startListening();
 }
 
-int ESTOP = 5;
 void loop()  
 {  
   if ( myRadio.available()) 
@@ -55,29 +54,21 @@ void loop()
         Serial.write(newData);
         oldData = newData;
     }
-   Serial.println("Line before checking newData");
-   
-//    if(newData == 1){
-//      relay_SetStatus(ON); // RELAY 1 ON
-//      delay(2000);
-//      relay_SetStatus(OFF);
-//    }
   }
 relay_SetStatus(OFF);
-delay(2000);
+//delay(2000);
 relay_SetStatus(ON);
-delay(2000);
+//delay(2000);
 Serial.write(oldData);
 Serial.println(oldData);
 }
 
 void relay_SetStatus(unsigned char status_1){
   digitalWrite(IN1, status_1);
-  Serial.println("Inside setStatus");
 }
 
 void relay_init(void) {
   pinMode(IN1, OUTPUT);
   relay_SetStatus(ON);
-  delay(2000);
+  //delay(2000);
 }
