@@ -1,5 +1,7 @@
 import math
 import pickle
+import re
+import serial
 
 import rospy
 from std_msgs.msg import String
@@ -7,6 +9,9 @@ from std_msgs.msg import String
 LIDAR_NODE = 'LIDAR'
 LIDAR_REFRESH_RATE = 50
 LIDAR_DEPRESSION = 10 * math.pi / 180  # angle of depression
+
+BAUD_RATE = 115200
+PORT = "/dev/ttyUSB0"
 
 
 class Vec2:
@@ -28,9 +33,11 @@ def get_angle():
     return 0
 
 
-def get_distance():
-    # TODO: Poll lidar
-    return 0
+def get_distance(serial_port):
+    line = serial_port.readline()
+    match = re.search('(?P<dist>(?:\d|\.)+) m .* (?P<conf>\d+) %', line)
+
+    return float(match.group('dist')) if match else -1
 
 
 def lidar_start():
@@ -38,16 +45,21 @@ def lidar_start():
     rospy.init_node(LIDAR_NODE, anonymous=True)
     rate = rospy.Rate(LIDAR_REFRESH_RATE)
 
-    while not rospy.is_shutdown():
-        dist = get_distance()
-        angle = get_angle()
+    lidar_port = serial.Serial(PORT, BAUD_RATE)
 
-        # calculate distance TODO correct for height?
-        dist = math.cos(LIDAR_DEPRESSION) * dist
+    try:
+        while not rospy.is_shutdown():
+            dist = get_distance(lidar_port)
+            angle = get_angle()
 
-        data = Vec2(magnitude=dist, direction=angle)
-        pub.publish(pickle.dumps(data))
-        rate.sleep()
+            # calculate distance TODO correct for height?
+            dist = math.cos(LIDAR_DEPRESSION) * dist
+
+            data = Vec2(magnitude=dist, direction=angle)
+            pub.publish(pickle.dumps(data))
+            rate.sleep()
+    finally:
+        lidar_port.close()
 
 
 if __name__ == '__main__':
