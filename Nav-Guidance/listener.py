@@ -13,7 +13,7 @@ def lidar_updated(data):
 
 
 def nav_start():
-    rospy.init_node('nav', anonymous=True)
+    rospy.init_node('nav')
 
     rospy.Subscriber(GPS_NODE, String, gps_updated)
     rospy.Subscriber(LIDAR_NODE, String, lidar_updated)
