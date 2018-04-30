@@ -44,5 +44,10 @@ int power1 = 21;
 int power2 = 22;
 int power3 = 23;
 
+int limit0 = 25;
+int limit1 = 24;
+int limit2 = 31;
+int limit3 = 32;
+
 
 

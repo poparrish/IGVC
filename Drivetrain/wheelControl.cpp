@@ -5,7 +5,7 @@
 
 
 wheelControl::wheelControl(){
-  Hz = 10;
+  Hz = 20;
   Pgain = 0.21;//final value
   Dgain = .25;//final value
   pulsesPerRot = 45;
@@ -38,7 +38,7 @@ wheelControl::wheelControl(){
   lasthubPerror = 0;
   PWheelGain = 2.5;
   DWheelGain = -.05;  
-  cutoff = 50;
+  cutoff = 20;
 }
 
 returnVariables wheelControl::calculate(float newDesiredRPM, float desiredAngle, float avgDeltaTime, unsigned long lastInterrupt, int encPos) {
@@ -50,38 +50,31 @@ returnVariables wheelControl::calculate(float newDesiredRPM, float desiredAngle,
  *  By setting the desried RPM to 0, we also we restart the interrupt logic and go open loop on the initial speedcheck
  *  value (set later on). 
  */
- /*
-    Serial.println(newDesiredRPM);
-    Serial.println(desiredAngle);
-    Serial.println(avgDeltaTime);
-    Serial.println(lastInterrupt);
-    Serial.println(encPos);
-*/
 
     if (newDesiredRPM < 0)
     {
       if (lastDesiredRPM > 0) {
-        // current negative new positive
+        // current positive new negative
         desiredRPM = 0;
       }
       else {
         // current negative new negative
         forwardBackward = LOW;
-        desiredRPM *= newDesiredRPM < 0 ? -1 : 1; 
+        desiredRPM =newDesiredRPM*-1;
       }
     }
     else {
       if (lastDesiredRPM < 0) {
+        // current negative new positive
         desiredRPM = 0; 
       }
       else {
+        //current positive new positive
         desiredRPM = newDesiredRPM;
         forwardBackward = HIGH;
       }
     }
 
-    Serial.print("desiredRPM: ");
-    Serial.println(desiredRPM);
     lastDesiredRPM = newDesiredRPM;
 
   /* 
@@ -107,54 +100,21 @@ returnVariables wheelControl::calculate(float newDesiredRPM, float desiredAngle,
 
     RPMerror = desiredRPM - curRPM;
     DerRPMerror = curRPM - lastcycleRPM;
-    Serial.print("curRPM:");
-    Serial.print(curRPM);
-    Serial.print("| Error: ");
-    Serial.println(RPMerror);
-    Serial.print("derrpmerror: ");
-    Serial.println(DerRPMerror);
-/*
- *  In the case that we are starting from zero, or our desired RPM is far from our current RPM, then we will use
- *  open loop control and set the PWM output to value that is close to the estimated PWM output for that RPM.
- *  The motor has more of a lag when it tries to slow down and hence needs a longer open loop control for this
- *  case (15 vs. 40). Also if the desired RPM is zero, then just set the PWM output to zero. The last "else"
- *  is the PD controller.
- */
 
-    Serial.print("forwardbackward: ");
-    Serial.println(forwardBackward);
-
-    hubKp = 1.5;
-    hubKd = 1;
-   // hubKi = .2;
-
+    //HUB PD START//
+    hubKp = .5;
+    hubKd = 5;
     hubPerror = desiredRPM - curRPM;
-    Serial.print("hubPerror: ");
-    Serial.println(hubPerror);
     hubDerror = hubPerror - lasthubPerror;
-    Serial.print("hubDerror: ");
-    Serial.println(hubDerror);
-    /*
-    if(curRPM > 50){
-      hubIerror += hubPerror;
-    }else{
-      hubIerror = 0;
-    }*/
-   // Serial.print("hubIerror: ");
-    //Serial.println(hubIerror);
-    speedCheckfloat = (hubKp * hubPerror) + (hubKd * hubDerror);// + (hubKi * hubIerror);
-   // Serial.print("Speedcheckfloat: ");
-    //Serial.println(speedCheckfloat);
+    lastCycleSpeedCheck = speedCheck;
+    speedCheckfloat = (hubKp * hubPerror) + (hubKd * hubDerror);
     speedCheck = (int)speedCheckfloat + (int)lastCycleSpeedCheck;
-    speedCheck = constrain(speedCheck, 0 , 254);
-    Serial.print("speedcheck: ");
-    Serial.println(speedCheck);
-
+    speedCheck = constrain(speedCheck, 40 , 400);//sets floor and ceiling...this may not be necessary KEEP THE 40, PID BREAKS WITHOUT IT
     if(desiredRPM == 0){
       speedCheck = 0;
     }
-   
     lasthubPerror = hubPerror;
+    //HUB PD END//
     
 
 
@@ -199,19 +159,19 @@ returnVariables wheelControl::calculate(float newDesiredRPM, float desiredAngle,
     derPlanMotPos = RPM * 6;  //  360 deg/min / 60sec/min = deg/sec  I hope. this is the derivative error for the PD controller
 
 
-    //PID IMPLEMENTATION START//
-    
+    //PLANETARY PID START//
     float Perror, Ierror, Derror;
-    float Kp=5, Ki=2, Kd=.1;
+    float Kp=5, Ki=6, Kd=.1;
     Perror = desiredWheelPos-currentWheelPos;//calculate proportional term
     Derror = Perror - lastPerror;//calculate derivative term
     Ierror += Perror;//calculate integral term
     motorSpeed = (Kp * Perror) + (Ki * Ierror) + (Kd * Derror);//total gain (pwm written to motor)
-    if((Perror < 1) && (Perror > -1)){motorSpeed = 0;}//do not increment the integral portion if +-1 degree of accuracy achieved
-    motorSpeed = constrain(motorSpeed, -50, 50);//constrain floor/ceiling values to fit within +-255(8bit)
-    intmotorSpeed = (long)(abs(motorSpeed));//convert to an int and add 5 for minimum power required to turn.
+    //if((Perror < 1) && (Perror > -1)){motorSpeed = 0;}//do not increment the integral portion if +-1 degree of accuracy achieved
+    motorSpeed = constrain(motorSpeed, -100, 100);//constrain floor/ceiling values to fit within +-255(8bit)
+    intmotorSpeed = (long)(abs(motorSpeed));//convert to long
     lastPerror = Perror;//set last proportional term for next derivative calculation.
-    if (motorSpeed >= 0) {//set appropriate direction for motors to turn since we can send negatives.
+    //PLANETARY PID END
+    if (motorSpeed >= 0) {//set appropriate direction for motors to turn since we cant send negatives.
       PlanMotDir = HIGH;
     }
     else {

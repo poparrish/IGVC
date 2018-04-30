@@ -20,6 +20,7 @@ class wheelControl {
   float hubPerror, hubIerror, hubDerror;
   float hubKp, hubKi, hubKd;
   float lasthubPerror;
+  float lastSpeedCheckfloat;
   
   // inits for planetary motor
 
