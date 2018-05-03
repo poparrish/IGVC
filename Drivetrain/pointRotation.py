@@ -32,25 +32,18 @@ def callback(data): # Receives joystick messages subscribed to Joy topic
     
     #THESE ARE THE VALUES THAT GUIDANCE WILL PLUG INTO
     translation_theta = calcJoyBearing(xAxis,yAxis)#crabbing angle 
-    theta_dot = data.axes[2] * -35#angle of rotation (not a vector any more) determines where on xaxis our external point of rotation is
+    theta_dot = data.axes[2] * -30#angle of rotation (not a vector any more) determines where on xaxis our external point of rotation is 30 degree turn max since that translates to a 45 degree inner wheel angle at benders chassis dimensions, this is sin(.5) of theta_dot
     bender_speed = data.axes[3] * 2.5#translational velocity at center of bender 
 
     #print str('bearing '+str(translation_theta))
     ser.write(str('W1'+calcWheel(bender_speed,translation_theta,w1x,w1y, theta_dot,LENGTH)+'\n'))
-    #print str('W0'+calcWheel(bender_speed,translation_theta,w1x,w1y, theta_dot,LENGTH)+'\n')
-    #print ser.readline();
+
     ser.write(str('W0'+calcWheel(bender_speed,translation_theta,w0x,w0y, theta_dot,LENGTH)+'\n'))
-    #print str('W1'+calcWheel(bender_speed,translation_theta,w0x,w0y, theta_dot,LENGTH)+'\n')
-    #print ser.readline();
+
     ser.write(str('W2'+calcWheel(bender_speed,translation_theta,w2x,w2y, theta_dot,LENGTH)+'\n'))
-    #print str('W2'+calcWheel(bender_speed,translation_theta,w2x,w2y, theta_dot,LENGTH)+'\n')
-    #print ser.readline();
+
     ser.write(str('W3'+calcWheel(bender_speed,translation_theta,w3x,w3y, theta_dot,LENGTH)+'\n'))
-    #print str('W3'+calcWheel(bender_speed,translation_theta,w3x,w3y, theta_dot,LENGTH)+'\n')
-    #print ser.readline();
-    
-    while ser.inWaiting():
-	print ser.readline()
+
     
     
 def calcWheel(bender_speed,translation_theta,wheelx,wheely,theta_dot,LENGTH): # Calculate wheel_theta and wheel_speed with direction
@@ -59,6 +52,7 @@ def calcWheel(bender_speed,translation_theta,wheelx,wheely,theta_dot,LENGTH): # 
     translation_theta = translation_theta *0.0174533
     theta_dot_degrees = theta_dot
     theta_dot = theta_dot*0.0174533
+    abs_trans_theta = math.fabs(theta_dot)+math.fabs(translation_theta)
     wheel_speed = 0
     wheel_theta = 0
     bender_radius = 0
@@ -66,6 +60,13 @@ def calcWheel(bender_speed,translation_theta,wheelx,wheely,theta_dot,LENGTH): # 
 	if(theta_dot_degrees < 1 and theta_dot_degrees > -1):#theta_dot = 0degrees +-1degDEADBAND
 	    wheel_theta = translation_theta
 	else: #theta_dot != 0degrees
+
+	    #if(abs_trans_theta > 0.785398):#we need to cap theta_dot at 45 degrees so that our point of rotation does not enter benders chassis.
+		#if(theta_dot > 0):#case for positive theta_dot
+		#    theta_dot = 0.785398-math.fabs(translation_theta)
+		#else:#case for negative theta_dot
+		#    theta_dot = -0.785398-math.fabs(translation_theta)
+
 	    bender_radius = (LENGTH/2)/math.sin(theta_dot)#point on xaxis we are rotating around
 	    wheel_theta = math.atan(wheely/(bender_radius - wheelx))+translation_theta#calculate the wheels angle to make a perpendicular with bender_radius. Then add any translationa_theta. Adding a translation_theta will rotate our point of rotation around bender so that we will have the option to pivot around our front or rear wheels if things get tight.
 	    wheel_speed = 0 
@@ -74,7 +75,14 @@ def calcWheel(bender_speed,translation_theta,wheelx,wheely,theta_dot,LENGTH): # 
 	    wheel_theta = translation_theta
 	    wheel_speed = bender_speed
 	else: #theta_dot != 0degrees
-	    bender_radius = (LENGTH/2)/math.sin(theta_dot)#point on xaxis we are rotating around
+
+	    #if(abs_trans_theta > 0.785398):#we need to cap theta_dot at 45 degrees so that our point of rotation does not enter benders chassis.
+		#if(theta_dot > 0):#case for positive theta_dot
+		#    theta_dot = 0.785398-math.fabs(translation_theta)
+		#else:#case for negative theta_dot
+		#    theta_dot = -0.785398-math.fabs(translation_theta)
+
+	    bender_radius = (LENGTH/2)/math.tan(theta_dot)#point on xaxis we are rotating around distance from center of bender (changed sin to tan) needed the distance from the center not from the front
 	    #we need to cap translation theta so that none of our wheels exceed 90 degrees
 	    if(translation_theta_degrees > 20):
 		translation_theta = 0.349066
@@ -84,7 +92,8 @@ def calcWheel(bender_speed,translation_theta,wheelx,wheely,theta_dot,LENGTH): # 
 	    wheel_theta = math.atan(wheely/(bender_radius - wheelx))+translation_theta #calculate the wheels angle to make a perpendicular with bender_radius. Then add any translationa_theta. Adding a translation_theta will rotate our point of rotation around bender so that we will have the option to pivot around our front or rear wheels if things get tight.
 	    
 	    #here we use speed=distance/time to calculate the appropriate speed for each wheel. First we need to calculate the total distance the wheel will travel relative the center of the robot if bender drives in a full circle
-	    wheel_radius = wheelx*wheelx+(bender_radius + wheely)*(bender_radius + wheely)
+	    wheelx = wheelx*-1
+	    wheel_radius = math.sqrt(wheely*wheely+(bender_radius + wheelx)*(bender_radius + wheelx))
 	    wheel_circumference = wheel_radius*2*3.14159#total distance center of robot will travel in meters
 	    #we need to calculate the total time it should take the center point of bender to travel the wheel_circumference. This is the time it will take all the wheels to travel the circle if they are traveling at the right speeds
 	    bender_radius = math.fabs(bender_radius)
@@ -148,6 +157,7 @@ if __name__ == '__main__':
     start()
     
     
+
 
 
 
