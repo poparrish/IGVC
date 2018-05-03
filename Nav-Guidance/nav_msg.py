@@ -6,7 +6,7 @@ class CameraMsg:
 		if(pickled_values!=None):
 			unpickled = pickle.loads(pickled_values)
 			return
-		possible_forward = [None]
+		possible_forward = [safe:[] , unsafe:[]]
 
 	def pickleMe(self):
 		return pickle.dumps(self)
