@@ -9,28 +9,22 @@ class Line:
 
 class CameraMsg:
 
-	def __init__(self, pickled_values = None):
+	def __init__(self, local_map_val = None,  pickled_values = None):
 		if(pickled_values!=None):
 			unpickled = pickle.loads(pickled_values)
-			self.left_line = unpickled.left_line
-			self.right_line = unpickled.right_line
-			self.clear_area = unpickled.clear_area
+			self.local_map = unpickled.local_map
 			return
-		self.left_line = None
-		self.right_line = None
-		self.clear_area = None
+		self.local_map = local_map_val
+		
 
 	def pickleMe(self):
 		return pickle.dumps(self)
 
 	def __str__(self):
-		return "left_line = {}, right_line = {}, clear_area = {}".format(self.left_line, self.right_line, self.clear_area)
+		return "local_map = {}".format(self.local_map)
 
-	def setLeftLine(self, equation):
-		self.left_line = Line(equation)
+	def setLocalMap(self, local_map):
+		self.local_map = local_map
 
-	def setRightLine(self, equation):
-		self.right_line = Line(equation)
-
-	def setClearArea(self, clear_area):
-		self.clear_area = clear_area
+	def getLocalMap(self):
+		return self.local_map

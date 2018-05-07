@@ -36,7 +36,7 @@ class GripPipelineTest:
         self.find_contours_output = None
 
         self.__filter_contours_contours = self.find_contours_output
-        self.__filter_contours_min_area = 2000.0
+        self.__filter_contours_min_area = 1000.0
         self.__filter_contours_min_perimeter = 0
         self.__filter_contours_min_width = 0
         self.__filter_contours_max_width = 1000
@@ -73,6 +73,7 @@ class GripPipelineTest:
 
         # Step Filter_Contours0:
         self.__filter_contours_contours = self.find_contours_output
+        
         (self.filter_contours_output) = self.__filter_contours(self.__filter_contours_contours, self.__filter_contours_min_area, self.__filter_contours_min_perimeter, self.__filter_contours_min_width, self.__filter_contours_max_width, self.__filter_contours_min_height, self.__filter_contours_max_height, self.__filter_contours_solidity, self.__filter_contours_max_vertices, self.__filter_contours_min_vertices, self.__filter_contours_min_ratio, self.__filter_contours_max_ratio)
         return self.filter_contours_output
 
@@ -100,17 +101,11 @@ class GripPipelineTest:
         Returns:
             A numpy.ndarray that has been blurred.
         """
-        if(type is BlurType.Box_Blur):
-            ksize = int(2 * round(radius) + 1)
-            return cv2.blur(src, (ksize, ksize))
-        elif(type is BlurType.Gaussian_Blur):
-            ksize = int(6 * round(radius) + 1)
-            return cv2.GaussianBlur(src, (ksize, ksize), round(radius))
-        elif(type is BlurType.Median_Filter):
-            ksize = int(2 * round(radius) + 1)
-            return cv2.medianBlur(src, ksize)
-        else:
-            return cv2.bilateralFilter(src, -1, round(radius), round(radius))
+        return src
+        print(src)
+        ksize = int(6 * round(radius) + 1)
+        # return cv2.GaussianBlur(src, (ksize, ksize), round(radius))
+
 
     @staticmethod
     def __find_contours(input, external_only):
