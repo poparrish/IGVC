@@ -3,18 +3,25 @@ import rospy
 import cv2
 from camera_msg import CameraMsg
 from std_msgs.msg import String
+import time
 
 new_camera_msg = None
 new_lidar_msg = None
 new_gps_msg = None
 
 def unpickleCameraMsg(unpickleString):
-    new_camera_msg = CameraMsg(unpickleString)
+    # print('recieved unpickleString')
+    # print(unpickleString.data)
+    unpickleString = unpickleString.data
+    # print(type(unpickleString))
+    new_camera_msg = CameraMsg(pickled_values = unpickleString)
+    
+    # print(new_camera_msg.getLocalMap().shape)
 
 def processState():
-    print("in processState")
+    # print("in processState")
     if new_camera_msg == None:
-        print('cam msg none')
+        # print('cam msg none')
         return
 
     local_map = new_camera_msg.getLocalMap()
@@ -29,6 +36,7 @@ def navigation():
     while not rospy.is_shutdown():
         new_nav_msg = processState()
         #None everything out so that way if there isn't a new update since the last used update it wont be used again
+        
         if cv2.waitKey(1) == 27: 
             break  # esc to quit
         
