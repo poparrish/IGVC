@@ -2,54 +2,76 @@
 import rospy
 import cv2
 from camera_msg import CameraMsg
+from nav_msg import NavMsg
 from std_msgs.msg import String
 import time
 
-new_camera_msg = None
-new_lidar_msg = None
-new_gps_msg = None
 
-def unpickleCameraMsg(unpickleString):
-    # print('recieved unpickleString')
-    # print(unpickleString.data)
-    unpickleString = unpickleString.data
-    # print(type(unpickleString))
-    new_camera_msg = CameraMsg(pickled_values = unpickleString)
-    
-    # print(new_camera_msg.getLocalMap().shape)
+class Navigation():
+    def __init__(self):
+        self.new_camera_msg = None
+        self.new_lidar_msg = None
+        self.new_gps_msg = None
+            
+    def unpickleCameraMsg(self, unpickleString):
+        print('recieved unpickleString')
+        unpickleString = unpickleString.data
+        self.new_camera_msg = CameraMsg(pickled_values = unpickleString)
 
-def processState():
-    # print("in processState")
-    if new_camera_msg == None:
-        # print('cam msg none')
-        return
+    def getCameraMsg(self):
+        return self.new_camera_msg
 
-    local_map = new_camera_msg.getLocalMap()
-    print(local_map)
-    cv2.imshow('local_map', local_map)
-    
-def navigation():
+    def unpickleLidarMsg(self, unpickleString):
+        print('recieved unpickleString')
+        unpickleString = unpickleString.data
+        self.new_lidar_msg = LidarMsg(pickled_values = unpickleString)
+
+    def getLidarMsg(self):
+        return self.new_lidar_msg
+
+    def unpickleGpsMsg(self, unpickleString):
+        print('recieved unpickleString')
+        unpickleString = unpickleString.data
+        self.new_gps_msg = GpsMsg(pickled_values = unpickleString)
+
+    def getGpsMsg(self):
+        return self.new_gps_msg
+
+    def noneOutMsg(self):
+        self.new_camera_msg = None
+        self.new_lidar_msg = None
+        self.new_gps_msg = None
+
+    def processState():
+        if self.new_camera_msg == None:
+            return
+        print("storing camera msg")
+
+
+def main():
+    nav = Navigation()
     rospy.init_node('nav_node', anonymous=True)
-    rospy.Subscriber('cameraMsgSent', String, unpickleCameraMsg)
+    rospy.Subscriber('cameraMsgSent', String, nav.unpickleCameraMsg)
+    rospy.Subscriber('MsgSent', String, nav.unpickleCameraMsg)
+    rospy.Subscriber('cameraMsgSent', String, nav.unpickleCameraMsg)
     guidance_publisher = rospy.Publisher('navigationMsgSent', String, queue_size = 10)
     rate = rospy.Rate(5)
     while not rospy.is_shutdown():
-        new_nav_msg = processState()
-        #None everything out so that way if there isn't a new update since the last used update it wont be used again
-        
+        new_nav_msg = NavMsg()
         if cv2.waitKey(1) == 27: 
             break  # esc to quit
         
+        if nav.getCameraMsg() != None:
+            print(len(nav.getCameraMsg().getLocalMap()))
+            local_map = nav.getCameraMsg().getLocalMap()
+            cv2.imshow('local_map', local_map)
         #if there isn't a new update publish the empty string so the guidance node knows it isn't going to get anything new
         new_nav_msg_string = ""
         if(new_nav_msg != None):
             new_nav_msg_string = new_nav_msg.pickleMe()
         guidance_publisher.publish(new_nav_msg_string)
         rate.sleep()
-        # new_camera_msg = None
-        new_lidar_msg = None
-        new_gps_msg = None
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    navigation()
+    main()

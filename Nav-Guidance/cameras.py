@@ -65,9 +65,9 @@ def processImage(camera_info):
 
     line_contours = grip.process(flat_map, hsv_hue_thresh = line_thresh_hue, hsv_sat_thresh = line_thresh_sat,hsv_val_thresh = line_thresh_val)
     cv2.drawContours(local_map, line_contours, -1, (0, 255, 0), thickness = -1)
-    cv2.imshow('local_map', local_map)
-    cv2.imshow('flat_map', flat_map)
-    return local_map
+    # cv2.imshow('local_map', local_map)
+    # cv2.imshow('flat_map', flat_map)
+    return local_map, line_contours
 
 def cameraProcessor():
     pub = rospy.Publisher('cameraMsgSent', String, queue_size=10)
@@ -75,9 +75,9 @@ def cameraProcessor():
     rate = rospy.Rate(10) # 10hz 
     camera_info = CameraInfo(36.5, 33, 52, 83, 103)        
     while not rospy.is_shutdown():
-        local_map  = processImage(camera_info)
-        local_map = np.zeros([3,3,3])
-        local_map_msg = CameraMsg(local_map)
+        local_map, contours  = processImage(camera_info)
+        # local_map = np.zeros([3,3,3])
+        local_map_msg = CameraMsg(local_map_val = local_map, contours = contours)
         local_map_msg_string = local_map_msg.pickleMe()
         # print(len(local_map_msg_string))
         # rospy.loginfo(local_map_msg_string)
