@@ -1,14 +1,13 @@
 from unittest import TestCase
 
 from lidar import *
-from util.vec2d import clamp
 
 VALID_ANGLE = ANGLE_IGNORE_START - 10
-VALID_DIST = MIN_DIST_CM + 1
+VALID_DIST = MIN_DIST_MM + 1
 
 
 def scan(angle, dist):
-    return None, angle, dist
+    return None, angle + LIDAR_ANGLE, dist
 
 
 class LidarTest(TestCase):
@@ -18,11 +17,11 @@ class LidarTest(TestCase):
                               scan(ANGLE_IGNORE_END, VALID_DIST),
                               scan(VALID_ANGLE, VALID_DIST)])
 
-        self.assertEquals([r.angle for r in res], [clamp(VALID_ANGLE - 180)])
+        self.assertEquals([r.angle for r in res], [VALID_ANGLE])
 
     def test_filters_distances(self):
-        res = vectorize_scan([scan(0, MIN_DIST_CM - 1),
+        res = vectorize_scan([scan(0, MIN_DIST_MM - 1),
                               scan(10, VALID_DIST),
-                              scan(20, MAX_DIST_CM + 1)])
+                              scan(20, MAX_DIST_MM + 1)])
 
         self.assertEquals([r.mag for r in res], [VALID_DIST])

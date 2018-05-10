@@ -4,22 +4,25 @@ import rospy
 from rplidar import RPLidar, MAX_MOTOR_PWM
 from std_msgs.msg import String
 
-from util.vec2d import Vec2d
+from util.vec2d import Vec2d, clamp
 
 LIDAR_NODE = 'LIDAR'
 
-MIN_DIST_CM = 500
-MAX_DIST_CM = 5000
+MIN_DIST_MM = 500
+MAX_DIST_MM = 2000
 
-ANGLE_IGNORE_START = 150
-ANGLE_IGNORE_END = 210
+ANGLE_IGNORE_START = 120
+ANGLE_IGNORE_END = 240
+
+LIDAR_ANGLE = 180  # lidar is backward
 
 
 def create_vector((quality, angle, dist)):
+    angle = clamp(angle + LIDAR_ANGLE)
     valid_angle = not ANGLE_IGNORE_START <= angle <= ANGLE_IGNORE_END
-    valid_distance = MIN_DIST_CM < dist < MAX_DIST_CM
+    valid_distance = MIN_DIST_MM < dist < MAX_DIST_MM
     if valid_angle and valid_distance:
-        return Vec2d(angle + 180, dist)
+        return Vec2d(angle, dist)
 
 
 def vectorize_scan(scan):

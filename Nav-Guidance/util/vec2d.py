@@ -2,6 +2,7 @@ import math
 
 
 def clamp(angle):
+    """convert an arbitrary angle (-180 to 180, etc) to a value between 0 to 360"""
     angle %= 360
     if angle < 0:
         angle += 360
@@ -24,10 +25,7 @@ class Vec2d:
 
     @staticmethod
     def from_point(x, y):
-        angle = math.atan2(y, x)
-        angle = math.degrees(angle)
-        # angle = clamp(angle)
-
+        angle = math.degrees(math.atan2(y, x))
         return Vec2d(angle, math.sqrt(x ** 2 + y ** 2))
 
     def with_angle(self, angle):
@@ -41,11 +39,17 @@ class Vec2d:
     def __add__(self, other):
         return Vec2d.from_point(self.x + other.x, self.y + other.y)
 
+    def __radd__(self, other):
+        return Vec2d.from_point(self.x + other, self.y + other)
+
     def __sub__(self, other):
         return Vec2d.from_point(self.x - other.x, self.y - other.y)
 
     def __mul__(self, scalar):
         return self.with_magnitude(self.mag * scalar)
+
+    def __div__(self, scalar):
+        return self.with_magnitude(self.mag / scalar)
 
     def __str__(self):
         return "(%s, %s)" % (self.angle, self.mag)
