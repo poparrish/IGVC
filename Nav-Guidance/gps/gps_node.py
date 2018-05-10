@@ -3,6 +3,7 @@ import time
 
 import rospy
 from pymavlink import mavutil
+from pymavlink.dialects.v20.common import GPS_FIX_TYPE_3D_FIX
 from std_msgs.msg import String
 
 from gps_msg import GPSMsg
@@ -12,11 +13,14 @@ GPS_REFRESH_RATE = 10
 
 
 def get_location(mav):
-    if 'GLOBAL_POSITION_INT' in mav.messages:
-        msg = mav.messages['GLOBAL_POSITION_INT']
-        return GPSMsg(lat=msg.lat / 10.0 ** 7,
-                      lon=msg.lon / 10.0 ** 7,
-                      heading=msg.hdg / 100.0)
+    pos = mav.messages.get('GLOBAL_POSITION_INT', None)
+    raw = mav.messages.get('GPS_RAW_INT', None)
+
+    if pos is not None and raw is not None:
+        return GPSMsg(lat=pos.lat / 10.0 ** 7,
+                      lon=pos.lon / 10.0 ** 7,
+                      heading=pos.hdg / 100.0,
+                      fixed=raw.fix_type >= GPS_FIX_TYPE_3D_FIX)
     return None
 
 

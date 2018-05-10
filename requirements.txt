@@ -1,6 +1,10 @@
+matplotlib
 future==0.16.0
 lxml==4.2.1
+numpy==1.14.3
+opencv-python==3.4.0.12
 pbr==4.0.2
 pymavlink==2.2.8
 rplidar==0.9.2
+Rx==1.6.1
 testresources==2.0.1
