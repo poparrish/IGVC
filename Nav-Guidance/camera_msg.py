@@ -3,7 +3,7 @@ import pickle
 
 class CameraMsg:
 
-	def __init__(self, contours = None, local_map_val = None,  pickled_values = None):
+	def __init__(self, contours = None, local_map_val = None,  pickled_values = None, camera_info = None):
 		if(pickled_values!=None):
 			# print(pickled_values.data)
 			unpickled = pickle.loads(pickled_values)
@@ -12,6 +12,7 @@ class CameraMsg:
 			return
 		self.local_map = local_map_val
 		self.contours = contours
+		self.camera_info = camera_info
 
 	def pickleMe(self):
 		# print(type(self.local_map))
@@ -28,3 +29,6 @@ class CameraMsg:
 
 	def getLocalMap(self):
 		return self.local_map
+	
+	def getCameraInfo(self):
+		return self.camera_info
