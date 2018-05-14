@@ -9,10 +9,11 @@ from camera_info import CameraInfo
 Configuration stuff
 
 '''
-cam1num = 0
+cam1num = 1
 cam = cv2.VideoCapture(cam1num)
 grip = GripPipelineTest()
 
+CAMERA_NODE = "CAMERA"
 #Check to see if HSL might be better on accident it seemed like it could do okay
 line_thresh_hue=[39,  64]
 line_thresh_sat=[55, 255]
@@ -37,8 +38,8 @@ def processImage(camera_info):
     return local_map, line_contours
 
 def cameraProcessor():
-    pub = rospy.Publisher('cameraMsgSent', String, queue_size=10)
-    rospy.init_node('camera_node', anonymous=True)
+    pub = rospy.Publisher(CAMERA_NODE, String, queue_size=10)
+    rospy.init_node(CAMERA_NODE, anonymous=True)
     rate = rospy.Rate(10) # 10hz 
     camera_info = CameraInfo(36.5, 33, 52, 83, 103)        
     while not rospy.is_shutdown():
