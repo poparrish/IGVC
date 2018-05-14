@@ -23,7 +23,13 @@ class Guidance():
 
     def unpickleNavMsg(self, data):
         self.new_guidance = True
+        step1ns = pickle.loads(data.data)
+        print(step1ns['gps'])
+        print(type(step1ns))
 
+
+def findWhiteLines(image):
+    pass
 
 def main():
     guidance = Guidance()
@@ -32,7 +38,6 @@ def main():
     guidance_publisher = rospy.Publisher(NAV_NODE, String, queue_size = 10)
     rate = rospy.Rate(GUIDANCE_HZ)
     while not rospy.is_shutdown():
-        
         rate.sleep()
     cv2.destroyAllWindows()
 
