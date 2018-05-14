@@ -5,11 +5,14 @@ import cv2
 import numpy as np
 from grip import GripPipelineTest
 from camera_info import CameraInfo
-'''
-Configuration stuff
 
 '''
-cam1num = 0
+Configuration stuff
+'''
+
+CAMERA_NODE = 'CAMERA'
+
+cam1num = 1
 cam = cv2.VideoCapture(cam1num)
 grip = GripPipelineTest()
 
@@ -37,8 +40,8 @@ def processImage(camera_info):
     return local_map, line_contours
 
 def cameraProcessor():
-    pub = rospy.Publisher('cameraMsgSent', String, queue_size=10)
-    rospy.init_node('camera_node', anonymous=True)
+    pub = rospy.Publisher(CAMERA_NODE, String, queue_size=10)
+    rospy.init_node(CAMERA_NODE, anonymous=True)
     rate = rospy.Rate(10) # 10hz 
     camera_info = CameraInfo(36.5, 33, 52, 83, 103)        
     while not rospy.is_shutdown():

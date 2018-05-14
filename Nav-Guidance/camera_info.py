@@ -1,4 +1,5 @@
-
+import numpy as np
+import cv2
 '''
 A class that is in charge of flattening an image from a camera given
 a known height of the camera

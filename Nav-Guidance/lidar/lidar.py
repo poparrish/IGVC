@@ -1,12 +1,10 @@
+    
 import pickle
-
 import rospy
 from rplidar import RPLidar, MAX_MOTOR_PWM
 from std_msgs.msg import String
 
-from util.vec2d import Vec2d
-
-LIDAR_NODE = 'LIDAR'
+from vec2d import Vec2d
 
 MIN_DIST_CM = 500
 MAX_DIST_CM = 5000
@@ -14,6 +12,7 @@ MAX_DIST_CM = 5000
 ANGLE_IGNORE_START = 150
 ANGLE_IGNORE_END = 210
 
+LIDAR_NODE = 'LIDAR'
 
 def create_vector((quality, angle, dist)):
     valid_angle = not ANGLE_IGNORE_START <= angle <= ANGLE_IGNORE_END

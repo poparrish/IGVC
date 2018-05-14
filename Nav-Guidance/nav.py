@@ -1,11 +1,16 @@
-
+import pickle
 import rospy
 import cv2
-from camera_msg import CameraMsg
+import sys
+from camera.camera_msg import CameraMsg
+from camera.cameras import CAMERA_NODE
+sys.modules['CameraMsg'] = CameraMsg
+from lidar.lidar import LIDAR_NODE
 from nav_msg import NavMsg
 from std_msgs.msg import String
 import time
 
+print(CAMERA_NODE)
 
 class Navigation():
     def __init__(self):
@@ -51,9 +56,9 @@ class Navigation():
 def main():
     nav = Navigation()
     rospy.init_node('nav_node', anonymous=True)
-    rospy.Subscriber('cameraMsgSent', String, nav.unpickleCameraMsg)
-    rospy.Subscriber('MsgSent', String, nav.unpickleCameraMsg)
-    rospy.Subscriber('cameraMsgSent', String, nav.unpickleCameraMsg)
+    rospy.Subscriber(CAMERA_NODE, String, nav.unpickleCameraMsg)
+    rospy.Subscriber(LIDAR_NODE, String, nav.unpickleCameraMsg)
+    rospy.Subscriber('gpsMsgSent', String, nav.unpickleCameraMsg)
     guidance_publisher = rospy.Publisher('navigationMsgSent', String, queue_size = 10)
     rate = rospy.Rate(5)
     while not rospy.is_shutdown():
