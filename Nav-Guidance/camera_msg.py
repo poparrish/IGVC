@@ -1,6 +1,6 @@
-
+import cv2
 import pickle
-
+import numpy as np
 class CameraMsg:
 
 	def __init__(self, contours = None, local_map_val = None,  pickled_values = None, camera_info = None):
