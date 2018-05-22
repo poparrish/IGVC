@@ -8,6 +8,11 @@ from std_msgs.msg import String
 from gps import GPS_NODE
 from lidar import LIDAR_NODE
 
+NODES_TO_LOG = {
+    LIDAR_NODE: String,
+    GPS_NODE: String
+}
+
 
 def log_callback(log_file, start_date, node):
     """generates a callback function that logs the data returned from a node"""
@@ -31,8 +36,13 @@ def logger_start():
 
     log_file = open("%s/%s.txt" % (log_dir, start), "w")
 
-    rospy.Subscriber(LIDAR_NODE, String, log_callback(log_file, start, LIDAR_NODE))
-    rospy.Subscriber(GPS_NODE, String, log_callback(log_file, start, GPS_NODE))
+    # Write the replay "header"
+    pickle.dump({
+        'nodes': NODES_TO_LOG.keys()
+    }, log_file)
+
+    for node, data_class in NODES_TO_LOG.iteritems():
+        rospy.Subscriber(node, data_class, log_callback(log_file, start, LIDAR_NODE))
 
     rospy.spin()
     log_file.close()

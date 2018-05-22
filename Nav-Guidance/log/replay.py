@@ -10,6 +10,8 @@ from std_msgs.msg import String
 
 def iterate_messages(log_file):
     with open(log_file, 'r') as f:
+        pickle.load(f)  # skip header
+
         while True:
             try:
                 yield pickle.load(f)
@@ -39,7 +41,9 @@ def replay_node(node, log_file, start_time=0.0):
 
 def start_replay(log_file, node=None):
     if node is None:
-        nodes = Set([m['node'] for m in iterate_messages(log_file)])
+        with open(log_file, 'r') as f:
+            header = pickle.load(f)
+            nodes = Set(header['nodes'])
 
         # spawn fake nodes as their own subprocesses
         procs = []
