@@ -1,18 +1,29 @@
 import math
 
 
-def clamp(angle):
-    """convert an arbitrary angle (-180 to 180, etc) to a value between 0 to 360"""
+def to180(angle):
+    angle %= 360
+    if angle > 180:
+        return 360 - angle
+    return angle
+
+
+def clamp360(angle):
     angle %= 360
     if angle < 0:
         angle += 360
     return angle
 
 
+def avg(coll):
+    return sum(coll) / len(coll)
+
+
 class Vec2d:
+    """Immutable 2d vector. Overloads most common operators."""
 
     def __init__(self, angle, mag):
-        self.angle = clamp(angle)
+        self.angle = clamp360(angle)
         self.mag = mag
 
     @property
@@ -29,7 +40,7 @@ class Vec2d:
         return Vec2d(angle, math.sqrt(x ** 2 + y ** 2))
 
     def with_angle(self, angle):
-        return Vec2d(clamp(angle), self.mag)
+        return Vec2d(clamp360(angle), self.mag)
 
     def with_magnitude(self, mag):
         if mag < 0:
@@ -50,6 +61,9 @@ class Vec2d:
 
     def __div__(self, scalar):
         return self.with_magnitude(self.mag / scalar)
+
+    def __neg__(self):
+        return self * -1
 
     def __str__(self):
         return "(%s, %s)" % (self.angle, self.mag)

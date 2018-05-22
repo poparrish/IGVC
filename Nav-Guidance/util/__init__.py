@@ -1,1 +1,1 @@
-from vec2d import Vec2d
+from vec2d import Vec2d, clamp360, avg

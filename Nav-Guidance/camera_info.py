@@ -1,5 +1,6 @@
-import numpy as np
 import cv2
+import numpy as np
+
 '''
 A class that is in charge of flattening an image from a camera given
 a known height of the camera
@@ -9,6 +10,7 @@ a known distance to the "mioddle" of the screen (halfway up what is seen)
 a knowd width that is seen at that middle
 It then does 
 '''
+
 
 class CameraInfo:
     def __init__(self, h, d1, w1, d2, w2):
@@ -23,7 +25,7 @@ class CameraInfo:
         self.trim = int(((float(self.midwidth - self.closewidth)/2)/float(self.middist - self.closedist))*self.map_height)
     
     def convertToFlat(self, image):
-        pts_src = np.float32([[0, 240],[640,240],[0, 480],[640, 480]])
+        pts_src = np.float32([[0, 150], [640, 150], [0, 480], [640, 480]])
         left_trim = self.trim
         #print(left_trim)
         right_trim = self.map_width - self.trim

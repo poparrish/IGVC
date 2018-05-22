@@ -5,12 +5,11 @@ from datetime import datetime
 import rospy
 from std_msgs.msg import String
 
-from gps import GPS_NODE
 from lidar import LIDAR_NODE
 
 NODES_TO_LOG = {
     LIDAR_NODE: String,
-    GPS_NODE: String
+    'cameraMsgSent': String
 }
 
 
@@ -23,7 +22,7 @@ def log_callback(log_file, start_date, node):
     }, log_file)
 
 
-def logger_start():
+def start_logger():
     rospy.init_node('LOGGER')
 
     start = datetime.now()
@@ -42,11 +41,11 @@ def logger_start():
     }, log_file)
 
     for node, data_class in NODES_TO_LOG.iteritems():
-        rospy.Subscriber(node, data_class, log_callback(log_file, start, LIDAR_NODE))
+        rospy.Subscriber(node, data_class, log_callback(log_file, start, node))
 
     rospy.spin()
     log_file.close()
 
 
 if __name__ == '__main__':
-    logger_start()
+    start_logger()

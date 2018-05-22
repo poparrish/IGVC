@@ -20,7 +20,7 @@ class GripPipelineTest:
         self.__hsv_threshold_input = self.blur_0_output
         self.__hsv_threshold_hue = [38, 75]
         self.__hsv_threshold_saturation = [50, 255]
-        self.__hsv_threshold_value = [0, 255]
+        self.__hsv_threshold_value = [190, 255]
 
         self.hsv_threshold_output = None
 
@@ -36,7 +36,7 @@ class GripPipelineTest:
         self.find_contours_output = None
 
         self.__filter_contours_contours = self.find_contours_output
-        self.__filter_contours_min_area = 700.0
+        self.__filter_contours_min_area = 300.0
         self.__filter_contours_min_perimeter = 0
         self.__filter_contours_min_width = 0
         self.__filter_contours_max_width = 1000

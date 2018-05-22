@@ -1,24 +1,35 @@
+import itertools
 import matplotlib.pyplot as plt
 import pickle
+from matplotlib import cm
 
+import numpy as np
 import rospy
+from rospy.numpy_msg import numpy_msg
+from rospy_tutorials.msg import Floats
 from rx.subjects import BehaviorSubject
 from std_msgs.msg import String
 
+from camera_msg import CameraMsg
+from cameras import CAMERA_NODE
 from gps import GPSMsg, GPS_NODE
-from lidar import MAX_DIST_MM, LIDAR_NODE
-from lidar.avoidance import partition_scan, calculate_heading, ATTRACTOR_THRESHOLD_MM
-from lidar.lidar import vectorize_scan
+from guidance import ATTRACTOR_THRESHOLD_MM, calculate_potential, contours_to_vectors, calculate_line_angle
+from lidar import convert_scan_to_vectors, MAX_DIST_MM, LIDAR_NODE
 from scans import test_scans
-from util.vec2d import Vec2d
+from util import Vec2d
 
 DEBUG_NODE = 'NAV_DEBUG'
-REFRESH_HZ = 15
+REFRESH_HZ = 8
 
 lidar_data = BehaviorSubject([])
 gps_data = BehaviorSubject(GPSMsg(0, 0, 0, False))
+camera_data = BehaviorSubject([])
 
 dest = (43.600532, -116.200390)  # rec center
+
+SIMULATE = False
+RENDER = False
+SPEED = 0.5
 
 
 def gps_updated(data):
@@ -31,56 +42,102 @@ def lidar_updated(data):
     lidar_data.on_next(msg)
 
 
+def camera_updated(data):
+    msg = CameraMsg(pickled_values=data.data)
+    camera_data.on_next(contours_to_vectors(msg.contours))
+
+
 def write(ser, wheel, wheel_theta, wheel_speed):
     ser.write('W%sB%sS%s\n' % (int(wheel), wheel_theta, wheel_speed))
 
 
-def draw_plot(scan, goal):
+def plot_vectors(vecs, size=None, color=None):
+    plt.scatter(x=[v.x for v in vecs],
+                y=[v.y for v in vecs],
+                s=size,
+                c=color)
+
+
+def draw_plot(lidar, camera, goal, heading, rotation):
     plt.clf()
 
     # Lidar data
     # scan = [v.with_angle(v.angle - 90) for v in scan]
-    plt.scatter(x=[v.x for v in scan],
-                y=[v.y for v in scan],
-                s=[10 for _ in scan])
-
-    cluster = partition_scan(scan)
-    plt.scatter(x=[v.x for (v, _) in cluster],
-                y=[v.y for (v, _) in cluster],
-                s=[10 * c for (_, c) in cluster],
-                c='purple')
+    plot_vectors(lidar, size=10, color='blue')
+    plot_vectors(camera, size=10, color='green')
 
     # Robot
     plt.scatter([0], [0], s=[100], c=[(1, 0, 0)])
 
     # Heading
-    heading = calculate_heading(scan, goal)
     plt.quiver([0, goal.x], [0, goal.y], color='grey')
     plt.quiver([0, heading.x], [0, heading.y])
+    rotation = Vec2d(rotation, 1)
+    plt.quiver([0, rotation.x], [0, rotation.y], color='blue')
 
     axis_range = [-MAX_DIST_MM, MAX_DIST_MM]
     plt.ylim(axis_range)
     plt.xlim(axis_range)
 
 
-def debug_start():
-    # ser = serial.Serial('/dev/ttyACM0', 115200)
+res_3d = 200
+fig_3d = plt.figure()
 
+
+def to_mm(i):
+    return i * res_3d - MAX_DIST_MM
+
+
+def replicate(item, times):
+    return list(itertools.repeat(item, times))
+
+
+def draw_plot_3d(lidar, camera, goal):
+    plt.clf()
+    ax = fig_3d.add_subplot(111, projection='3d')
+
+    dim = MAX_DIST_MM * 2 / res_3d + 1
+    r = xrange(0, dim)
+
+    x = [replicate(to_mm(i), times=dim) for i in r]
+    y = replicate(map(to_mm, r), times=dim)
+
+    # take the cartesian product
+    ms = [to_mm(i) for i in r]
+    # z_old = [Vec2d.from_point(x, y) in itertools.product(ms, ms)]
+
+    z = []
+    for i in ms:
+        row = []
+        for j in ms:
+            row.append(calculate_potential(lidar, camera, goal, position=Vec2d.from_point(i, j)).mag)
+        z.append(row)
+
+    ax.plot_surface(x, y, z, rstride=1, cstride=1, cmap=cm.coolwarm, linewidth=0, antialiased=False)
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+
+def start_debug():
     rospy.init_node(DEBUG_NODE)
+    pub = rospy.Publisher('control', numpy_msg(Floats), queue_size=3)
     rospy.Subscriber(GPS_NODE, String, gps_updated)
     rospy.Subscriber(LIDAR_NODE, String, lidar_updated)
+    rospy.Subscriber(CAMERA_NODE, String, camera_updated)
 
     # Generate test data
-    goal = Vec2d(0, ATTRACTOR_THRESHOLD_MM * 2)
+    goal = Vec2d(0, ATTRACTOR_THRESHOLD_MM)
 
     # Scale up test data
-    s = [[v * 1.5 for v in vectorize_scan(s)] for s in test_scans]
+    s = [[v * 1 for v in convert_scan_to_vectors(s)] for s in test_scans]
 
     i = 0
+    rate = rospy.Rate(REFRESH_HZ)
     while not rospy.is_shutdown():
         i = (i + 1) % len(s)
 
-        current_scan = s[i]
         # current_scan = lidar_data.value
         # gps_location = gps_data.value
         # if current_scan is None or gps_location.fixed is False:
@@ -90,23 +147,39 @@ def debug_start():
 
         # goal = calculate_gps_heading(gps_location, dest)
 
-        draw_plot(current_scan, goal)
+        # TODO: REPLAY INSTEAD
+        lidar = s[i] if SIMULATE else lidar_data.value
+        camera = camera_data.value
+        camera_flat = [v for c in camera for v in c]
 
-        heading = calculate_heading(current_scan, goal)
-        theta = heading.angle
-        if theta > 180:
-            theta = -(360 - theta)
-        # print("theta = %s" % theta)
-        # print("goal = %s" % goal.angle)
+        desired_heading = calculate_potential(lidar, camera_flat, goal)
 
-        theta = max(-90, min(theta, 90))
-        print("theta = " + str(theta))
+        # calculate translational theta
+        translation = desired_heading.angle
+        if translation > 180:
+            translation = -(360 - translation)
+        translation = max(-90, min(translation, 90))
+        heading = desired_heading.with_angle(translation)
 
-        # for w in range(4):
-        #     write(ser, w, theta, 60)
+        theta_dot = calculate_line_angle(camera)
+        if abs(theta_dot) < 10:
+            theta_dot = 0
+        theta_dot /= 4.0
 
-        plt.pause(1.0 / REFRESH_HZ)
+        # draw_plot_3d(lidar, camera, goal)
+
+        print("translation = %s" % translation)
+
+        a = np.array([translation, theta_dot, SPEED], dtype=np.float32)
+        # a = np.array([4, 12, 0], dtype=np.float32)
+        pub.publish(a)
+
+        if RENDER:
+            draw_plot(lidar, camera_flat, goal, heading, theta_dot)
+            plt.pause(1.0 / REFRESH_HZ)
+        else:
+            rate.sleep()
 
 
 if __name__ == '__main__':
-    debug_start()
+    start_debug()

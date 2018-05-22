@@ -9,6 +9,7 @@ class CameraMsg:
 			unpickled = pickle.loads(pickled_values)
 			# print(unpickled.local_map)
 			self.local_map = unpickled.local_map
+			self.contours = unpickled.contours
 			return
 		self.local_map = local_map_val
 		self.contours = contours

@@ -24,7 +24,7 @@ def get_location(mav):
     return None
 
 
-def mavlink_init(device):
+def init_mavlink(device):
     mav = mavutil.mavlink_connection(device, baud=115200, autoreconnect=True)
 
     rospy.logdebug('Waiting for HEARTBEAT')
@@ -33,11 +33,11 @@ def mavlink_init(device):
     return mav
 
 
-def gps_start(device):
+def start_gps(device):
     pub = rospy.Publisher(GPS_NODE, String, queue_size=GPS_REFRESH_RATE * 10)
     rospy.init_node(GPS_NODE)
 
-    mav = mavlink_init(device)
+    mav = init_mavlink(device)
     pevent = mavutil.periodic_event(GPS_REFRESH_RATE)
 
     while not rospy.is_shutdown():
@@ -52,4 +52,4 @@ def gps_start(device):
 
 
 if __name__ == '__main__':
-    gps_start('/dev/ttyACM0')
+    start_gps('/dev/ttyACM0')
