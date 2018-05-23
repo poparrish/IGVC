@@ -117,8 +117,8 @@ def calcWheel(bender_speed,translation_theta,wheelx,wheely,theta_dot,LENGTH): # 
     return wheelString
 
 def start():
-    rospy.Subscriber("floats", numpy_msg(Floats), callback)
-    rospy.init_node('Joy2BenderBitches')
+    rospy.Subscriber("control", numpy_msg(Floats), callback)
+    rospy.init_node('Control_Node')
     rospy.spin()
 
 if __name__ == '__main__':
