@@ -39,6 +39,8 @@ int encBWheel3 = 9;
 int pwmPinWheel3 = 38;
 int dirPinWheel3 = 19;
 
+int safetyLight = 39;
+
 int power0 = 20;
 int power1 = 21;
 int power2 = 22;
