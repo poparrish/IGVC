@@ -28,6 +28,16 @@ def callback(data): # Receives joystick messages subscribed to Joy topic
     w1y = LENGTH/2*-1
     w2y = LENGTH/2*-1
     w3y = LENGTH/2
+    #angles for point turn
+    w0p = -45
+    w1p = 45
+    w2p = -45
+    w3p = 45
+    #point turn speed multiplier
+    w0dir = 1
+    w1dir = 1
+    w2dir = -1
+    w3dir = -1
     
     #THESE ARE JOYSTICK ONLY
     #yAxis = data.axes[1] * 2
@@ -43,17 +53,17 @@ def callback(data): # Receives joystick messages subscribed to Joy topic
     bender_speed = data.data[2]
 
     #print str('bearing '+str(translation_theta))
-    ser.write(str('W1'+calcWheel(bender_speed,translation_theta,w1x,w1y, theta_dot,LENGTH)+'\n'))
+    ser.write(str('W1'+calcWheel(bender_speed,translation_theta,w1x,w1y, theta_dot,LENGTH,w1p,w1dir)+'\n'))
 
-    ser.write(str('W0'+calcWheel(bender_speed,translation_theta,w0x,w0y, theta_dot,LENGTH)+'\n'))
+    ser.write(str('W0'+calcWheel(bender_speed,translation_theta,w0x,w0y, theta_dot,LENGTH,w0p,w0dir)+'\n'))
 
-    ser.write(str('W2'+calcWheel(bender_speed,translation_theta,w2x,w2y, theta_dot,LENGTH)+'\n'))
+    ser.write(str('W2'+calcWheel(bender_speed,translation_theta,w2x,w2y, theta_dot,LENGTH,w2p,w2dir)+'\n'))
 
-    ser.write(str('W3'+calcWheel(bender_speed,translation_theta,w3x,w3y, theta_dot,LENGTH)+'\n'))
+    ser.write(str('W3'+calcWheel(bender_speed,translation_theta,w3x,w3y, theta_dot,LENGTH,w3p,w3dir)+'\n'))
 
     
     
-def calcWheel(bender_speed,translation_theta,wheelx,wheely,theta_dot,LENGTH): # Calculate wheel_theta and wheel_speed with direction
+def calcWheel(bender_speed,translation_theta,wheelx,wheely,theta_dot,LENGTH,point_turn,point_dir): # Calculate wheel_theta and wheel_speed with direction
     #all calculations are in radians and meters. we convert to degrees and rpm at the end
     translation_theta_degrees = translation_theta
     translation_theta = translation_theta *0.0174533
@@ -109,6 +119,12 @@ def calcWheel(bender_speed,translation_theta,wheelx,wheely,theta_dot,LENGTH): # 
 	    #NEW TEST LOGI
 	    wheel_speed = wheel_circumference/travel_time#s=d/t
 	    
+    if (theta_dot_degrees == 200):#point turn special case right
+	wheel_theta = point_turn/57.2958
+	wheel_speed = wheel_speed*point_dir-1
+    if (theta_dot_degrees == -200):#point turn special case left
+	wheel_theta = point_turn/57.2958
+	wheel_speed = wheel_speed*point_dir
 
     #convert from m/s to rpm & radians to degrees
     wheel_speed = wheel_speed/0.0085922#for no orange tread
@@ -125,6 +141,7 @@ if __name__ == '__main__':
     start()
     
     
+
 
 
 
