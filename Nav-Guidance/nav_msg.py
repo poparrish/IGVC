@@ -1,12 +1,18 @@
 import pickle
 
+
 class NavMsg:
 
-	def __init__(self, pickled_values = None):
-		if(pickled_values!=None):
-			unpickled = pickle.loads(pickled_values)
-			return
-		# possible_forward = [safe:[] , unsafe:[]]
+    def __init__(self, camera, gps, lidar, stop, heading):
+        self.camera = camera
+        self.gps = gps
+        self.lidar = lidar
+        self.stop = stop
+        self.heading = heading
 
-	def pickleMe(self):
-		return pickle.dumps(self)
+    def pickle(self):
+        return pickle.dumps(self)
+
+    @staticmethod
+    def unpickle(value):
+        return pickle.loads(value)

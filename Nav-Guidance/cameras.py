@@ -39,7 +39,7 @@ def processImage(camera_info):
 
 def cameraProcessor():
     pub = rospy.Publisher(CAMERA_NODE, String, queue_size=10)
-    rospy.init_node(CAMERA_NODE, anonymous=True)
+    rospy.init_node(CAMERA_NODE)
     rate = rospy.Rate(10) # 10hz 
     camera_info = CameraInfo(36.5, 33, 52, 83, 103)        
     while not rospy.is_shutdown():

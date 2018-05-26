@@ -27,8 +27,7 @@ camera_data = BehaviorSubject([])
 
 dest = (43.600532, -116.200390)  # rec center
 
-SIMULATE = False
-RENDER = False
+SIMULATE = True
 SPEED = 0.5
 
 
@@ -45,10 +44,6 @@ def lidar_updated(data):
 def camera_updated(data):
     msg = CameraMsg(pickled_values=data.data)
     camera_data.on_next(contours_to_vectors(msg.contours))
-
-
-def write(ser, wheel, wheel_theta, wheel_speed):
-    ser.write('W%sB%sS%s\n' % (int(wheel), wheel_theta, wheel_speed))
 
 
 def plot_vectors(vecs, size=None, color=None):
@@ -174,11 +169,8 @@ def start_debug():
         # a = np.array([4, 12, 0], dtype=np.float32)
         pub.publish(a)
 
-        if RENDER:
-            draw_plot(lidar, camera_flat, goal, heading, theta_dot)
-            plt.pause(1.0 / REFRESH_HZ)
-        else:
-            rate.sleep()
+        draw_plot(lidar, camera_flat, goal, heading, theta_dot)
+        plt.pause(1.0 / REFRESH_HZ)
 
 
 if __name__ == '__main__':

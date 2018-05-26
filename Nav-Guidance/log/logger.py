@@ -5,11 +5,12 @@ from datetime import datetime
 import rospy
 from std_msgs.msg import String
 
+from cameras import CAMERA_NODE
 from lidar import LIDAR_NODE
 
 NODES_TO_LOG = {
     LIDAR_NODE: String,
-    'cameraMsgSent': String
+    CAMERA_NODE: String
 }
 
 

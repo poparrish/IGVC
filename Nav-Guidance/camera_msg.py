@@ -33,3 +33,7 @@ class CameraMsg:
 	
 	def getCameraInfo(self):
 		return self.camera_info
+
+	@staticmethod
+	def unpickle(value):
+		return pickle.loads(value)

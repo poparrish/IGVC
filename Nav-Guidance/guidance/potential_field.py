@@ -36,10 +36,9 @@ def partition(vecs, cluster_mm):
 
 def calc_attractive_force(attractor, position):
     attractor -= position
-    if attractor.mag <= ATTRACTOR_THRESHOLD_MM:
-        f = 0.5 * A_FACTOR * attractor.mag ** 2  # quadratic
-    else:
-        f = A_FACTOR * attractor.mag  # conical
+
+    mag = min(attractor.mag, ATTRACTOR_THRESHOLD_MM)  # don't change scaling unless we're really close
+    f = 0.5 * A_FACTOR * mag ** 2  # quadratic
     return attractor.with_magnitude(f)
 
 
@@ -65,11 +64,9 @@ def sum_repulsors(vecs, position, cluster_mm, weight):
 
 
 def calculate_potential(lidar_data, camera_data, goal, position=zero):
-    a = calc_attractive_force(goal, position)  # TODO: Constant
+    a = calc_attractive_force(goal, position)
 
     rl = sum_repulsors(lidar_data, position, cluster_mm=150, weight=2)
     rc = sum_repulsors(camera_data, position, cluster_mm=500, weight=1)
 
-    print('r=%s' % (rl + rc).mag)
-    print('a=%s' % a.mag)
     return a - rl - rc

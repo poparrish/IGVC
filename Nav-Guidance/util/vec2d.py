@@ -4,7 +4,7 @@ import math
 def to180(angle):
     angle %= 360
     if angle > 180:
-        return 360 - angle
+        angle = -360 + angle
     return angle
 
 
