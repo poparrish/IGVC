@@ -8,7 +8,7 @@ import rospy
 from rospy_tutorials.msg import Floats
 from rospy.numpy_msg import numpy_msg
 
-ser = serial.Serial('/dev/ttyACM0', 250000)
+ser = serial.Serial('/dev/teensy', 250000)
 
 # Author: parker
 # This ROS Node selects/converts inputs from what will be the guidance node (right now it is subbed to our dummy node "floats to test pub/sub) and converts that into speeds and bearings for our wheels

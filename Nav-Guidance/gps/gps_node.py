@@ -44,11 +44,11 @@ def start_gps(device):
         if pevent.trigger():
             loc = get_location(mav)
             if loc is not None:
-                # rospy.loginfo('Publishing gps %s' % loc['heading'])
+                rospy.loginfo('Publishing gps %s' % loc)
                 pub.publish(pickle.dumps(loc))
 
         time.sleep(0.01)
 
 
 if __name__ == '__main__':
-    start_gps('/dev/ttyACM1')
+    start_gps('/dev/pixhawk')
