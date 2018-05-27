@@ -326,6 +326,8 @@ float AvgDeltaTimeWheel3 = 10000001;
 int iWheel3;
 float DeltaTimeWheel3[40];
 
+float wh0avg = 100000;
+
 void counterWheel3() {
   // Need first pass logic to set the last interrupt time to get an accurate time between interrupts on the second pass
   if ((FirstPassWheel3 or backToZeroWheel3)) {
@@ -645,6 +647,7 @@ void loop() {
         analogWrite(pwmPinWheel3,50);
 
         while(unNotched0 == false || unNotched1 == false || unNotched2 == false || unNotched3 == false) {
+          delay(50);
           if(digitalRead(limit0) == 1) {
             unNotched0 = true;
             analogWrite(pwmPinWheel0,0);
@@ -673,27 +676,29 @@ void loop() {
       analogWrite(pwmPinWheel3,50);
 
       if(firstTrip0 > 500.0 && digitalRead(limit0) == 0) {
-        firstTrip0 = returnVariablesWheel0.currentWheelAngle-10;
+        firstTrip0 = returnVariablesWheel0.currentWheelAngle;
       }
 
       if(firstTrip0 < 500.0 && secondTrip0 > 500.0 && digitalRead(limit0) == 1) {
         secondTrip0 = returnVariablesWheel0.currentWheelAngle;
         int dif = abs(firstTrip0 - secondTrip0);
         if(dif < 30) {
-          secondTrip0 = 999.0;
+          secondTrip0 = 1000.0;
         }
       }
 
-      if(firstTrip0 < 500.0 && secondTrip0 < 500.0) {
-
+      if(firstTrip0 < 500.0 && secondTrip0 < 500.0 ) {
+        float avg = (firstTrip0 + secondTrip0)/2;
         if(firstTrip0 > 0 && secondTrip0 > 0){
-          parsedCmdWh0 = zeroParsedWheel(0,0);
+          parsedCmdWh0 = zeroParsedWheel(0,avg-8);
+        }
+        else if(firstTrip0 * secondTrip0 < 0){
+          parsedCmdWh0 = zeroParsedWheel(0,avg-10);
         }
         else {
-          float avg = (firstTrip0 + secondTrip0)/2;
-          parsedCmdWh0 = zeroParsedWheel(0,avg);
+          wh0avg = 9;
+          parsedCmdWh0 = zeroParsedWheel(0,avg+11);
         }
-
 
         parsedCmdWheelArray[0] = parsedCmdWh0;
 
@@ -714,19 +719,21 @@ void loop() {
         secondTrip1 = returnVariablesWheel1.currentWheelAngle;
         int dif = abs(firstTrip1 - secondTrip1);
         if(dif < 30) {
-          secondTrip1 = 1000.0;
+          secondTrip1 = 999.0;
         }
       }
 
       if(firstTrip1 < 500.0 && secondTrip1 < 500.0) {
+        float avg = (firstTrip1 + secondTrip1)/2;
         if(firstTrip1 > 0 && secondTrip1 > 0){
-          parsedCmdWh1 = zeroParsedWheel(1,0);
+          parsedCmdWh1 = zeroParsedWheel(1,avg-30);
+        }
+        else if(firstTrip1 * secondTrip1 < 0){
+          parsedCmdWh1 = zeroParsedWheel(1,avg+3);
         }
         else {
-          float avg = (firstTrip1 + secondTrip1)/2;
-          parsedCmdWh1 = zeroParsedWheel(1,avg);
+          parsedCmdWh1 = zeroParsedWheel(1,avg+5);
         }
-
 
         parsedCmdWheelArray[1] = parsedCmdWh1;
 
@@ -739,7 +746,7 @@ void loop() {
       }
       
       if(firstTrip2 > 500.0 && digitalRead(limit2) == 0) {
-        firstTrip2 = returnVariablesWheel2.currentWheelAngle+15;
+        firstTrip2 = returnVariablesWheel2.currentWheelAngle;
       }
       if(firstTrip2 < 500.0 && secondTrip2 > 500.0 && digitalRead(limit2) == 1) {
         secondTrip2 = returnVariablesWheel2.currentWheelAngle;
@@ -749,14 +756,16 @@ void loop() {
         }
       }
       if(firstTrip2 < 500.0 && secondTrip2 < 500.0) {
+        float avg = (firstTrip2 + secondTrip2)/2;
         if(firstTrip2 > 0 && secondTrip2 > 0){
-          parsedCmdWh2 = zeroParsedWheel(2,0);
+          parsedCmdWh2 = zeroParsedWheel(2,avg-13);
+        }
+        else if(firstTrip2 * secondTrip2 < 0){
+          parsedCmdWh2 = zeroParsedWheel(2,avg-6);
         }
         else {
-          float avg = (firstTrip2 + secondTrip2)/2;
-          parsedCmdWh2 = zeroParsedWheel(2,avg);
+          parsedCmdWh2 = zeroParsedWheel(2,avg+10);
         }
-
 
         parsedCmdWheelArray[2] = parsedCmdWh2;
 
@@ -768,7 +777,7 @@ void loop() {
          dirSwap2 = 1;
       }
       if(firstTrip3 > 500.0 && digitalRead(limit3) == 0) {
-        firstTrip3 = returnVariablesWheel3.currentWheelAngle+15;
+        firstTrip3 = returnVariablesWheel3.currentWheelAngle;
       }
 
       if(firstTrip3 < 500.0 && secondTrip3 > 500.0 && digitalRead(limit3) == 1) {
@@ -780,12 +789,15 @@ void loop() {
       }
 
       if(firstTrip3 < 500.0 && secondTrip3 < 500.0) {
+        float avg = (firstTrip3 + secondTrip3)/2;
         if(firstTrip3 > 0 && secondTrip3 > 0){
-          parsedCmdWh3 = zeroParsedWheel(3,0);
+          parsedCmdWh3 = zeroParsedWheel(3,avg-12);
+        }
+        else if(firstTrip3 * secondTrip3 < 0){
+          parsedCmdWh3 = zeroParsedWheel(3,avg-14);
         }
         else {
-          float avg = (firstTrip3 + secondTrip3)/2;
-          parsedCmdWh3 = zeroParsedWheel(3,avg);
+          parsedCmdWh3 = zeroParsedWheel(3,avg+11);
         }
 
         parsedCmdWheelArray[3] = parsedCmdWh3;
@@ -797,6 +809,9 @@ void loop() {
       if((returnVariablesWheel3.currentWheelAngle > 170 || returnVariablesWheel3.currentWheelAngle < -170) && firstTrip3 > 500.0){
          dirSwap3 = 1;
       }
+      
+      delay(25);
+    }
       Serial.print("\nfirstTrip0: ");
       Serial.println(firstTrip0);
       Serial.print("secondTrip0: ");
@@ -813,9 +828,6 @@ void loop() {
       Serial.println(firstTrip3);
       Serial.print("secondTrip3: ");
       Serial.println(secondTrip3);
-      delay(25);
-    }
-      
       
 
 //    create temp floats to store last value so that new data is only sent to the wheels once (no repeat)
@@ -948,4 +960,3 @@ void loop() {
   }
   
 }
-
