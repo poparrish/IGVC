@@ -15,9 +15,9 @@ grip = GripPipelineTest()
 
 CAMERA_NODE = "CAMERA"
 #Check to see if HSL might be better on accident it seemed like it could do okay
-line_thresh_hue=[39,  64]
-line_thresh_sat=[55, 255]
-line_thresh_val=[190, 255]
+line_thresh_hue=[52,  105]
+line_thresh_sat=[0, 129]
+line_thresh_val=[177, 255]
 
 can_traverse_thresh_hue=[0, 40]
 can_traverse_thresh_sat=[0, 155]
