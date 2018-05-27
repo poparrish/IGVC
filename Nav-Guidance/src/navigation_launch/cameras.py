@@ -10,7 +10,7 @@ from camera_info import CameraInfo
 Configuration stuff
 
 '''
-cam1num = 0
+cam1num = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
 cam = cv2.VideoCapture(cam1num)
 grip = GripPipelineTest()
 
