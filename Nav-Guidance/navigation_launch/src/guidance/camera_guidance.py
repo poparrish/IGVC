@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from util import Vec2d, clamp360
+from util import Vec2d
 
 # TODO: Get this from camera_info?
 WIDTH_PX = 420

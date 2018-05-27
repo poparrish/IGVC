@@ -5,9 +5,7 @@ from camera_msg import CameraMsg
 from cameras import CAMERA_NODE
 from gps import GPS_NODE
 from lidar import LIDAR_NODE
-from nav_msg import NavMsg
 from std_msgs.msg import String
-import time
 
 NAV_HZ = 5
 NAV_NODE = 'NAV'

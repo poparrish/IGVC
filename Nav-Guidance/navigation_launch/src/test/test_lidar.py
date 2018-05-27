@@ -1,6 +1,6 @@
 from nose.tools import assert_equal
 
-from lidar.lidar_node import *
+from lidar import *
 
 VALID_ANGLE = ANGLE_IGNORE_START - 10
 VALID_DIST = MIN_DIST_MM + 1

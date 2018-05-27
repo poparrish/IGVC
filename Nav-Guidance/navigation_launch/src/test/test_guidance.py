@@ -2,8 +2,8 @@ from nose.tools import assert_almost_equal, assert_less, assert_true
 
 from gps import GPSMsg
 from guidance import calculate_gps_heading
-from guidance.camera_guidance import largest_contour, calculate_line_angle
-from guidance.gps_guidance import initial_bearing
+from guidance import largest_contour, calculate_line_angle
+from guidance import initial_bearing
 from util import clamp360
 
 

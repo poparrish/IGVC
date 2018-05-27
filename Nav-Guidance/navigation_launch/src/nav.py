@@ -3,10 +3,8 @@ import pickle
 
 import rospy
 from rx import Observable
-from rx.subjects import BehaviorSubject
 from std_msgs.msg import String
 
-from camera_msg import CameraMsg
 from cameras import CAMERA_NODE
 from gps import GPS_NODE
 from guidance import contours_to_vectors
@@ -35,11 +33,10 @@ def main():
 
     rospy.loginfo('Nav waiting for messages...')
     combined = Observable.combine_latest(camera, lidar, gps, process_state) \
-        .throttle_first(1000.0 / NAV_HZ) \
-        .tap(rospy.loginfo)
+        .throttle_first(1000.0 / NAV_HZ)
 
     combined.take(1).subscribe(lambda x: rospy.loginfo('Nav starting...'))
-    combined.map(pickle.dumps).subscribe(pub.publish)
+    combined.tap(rospy.loginfo).subscribe(lambda x: pub.publish(pickle.dumps(x)))
 
     rospy.spin()
 

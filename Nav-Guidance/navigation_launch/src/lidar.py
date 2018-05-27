@@ -44,4 +44,4 @@ def start_lidar(device):
 
 
 if __name__ == '__main__':
-    start_lidar('/dev/ttyUSB0')
+    start_lidar('/dev/lidar')
