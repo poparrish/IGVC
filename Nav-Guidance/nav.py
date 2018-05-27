@@ -35,11 +35,10 @@ def main():
 
     rospy.loginfo('Nav waiting for messages...')
     combined = Observable.combine_latest(camera, lidar, gps, process_state) \
-        .throttle_first(1000.0 / NAV_HZ) \
-        .tap(rospy.loginfo)
+        .throttle_first(1000.0 / NAV_HZ)
 
     combined.take(1).subscribe(lambda x: rospy.loginfo('Nav starting...'))
-    combined.map(pickle.dumps).subscribe(pub.publish)
+    combined.tap(rospy.loginfo).subscribe(lambda x: pub.publish(pickle.dumps(x)))
 
     rospy.spin()
 

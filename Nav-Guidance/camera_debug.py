@@ -60,7 +60,7 @@ def main():
     nav_publisher = rospy.Publisher(NAV_NODE, String, queue_size = 10)
     rate = rospy.Rate(NAV_HZ)
     while not rospy.is_shutdown():
-        new_nav_msg = NavMsg()
+        # new_nav_msg = NavMsg()
         if cv2.waitKey(1) == 27: 
             break  # esc to quit
         

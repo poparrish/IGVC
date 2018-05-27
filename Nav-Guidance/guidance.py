@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import pickle
+
 import numpy as np
 import rospy
 from rospy.numpy_msg import numpy_msg
@@ -20,7 +22,8 @@ GUIDANCE_HZ = 5
 # Drivetrain
 #
 
-DEFAULT_SPEED = 0  # forward speed in m/s
+DEFAULT_SPEED = 0.5  # forward speed in m/s
+MAX_ROTATION = 90  # max crabbing angle
 MAX_TRANSLATION = 90  # max crabbing angle
 
 control = None
@@ -28,6 +31,7 @@ control = None
 
 def update_drivetrain(translation, rotation, speed):
     translation = max(-MAX_TRANSLATION, min(translation, MAX_TRANSLATION))
+    rotation = max(-MAX_ROTATION, min(rotation, MAX_ROTATION))
     control.publish(np.array([translation, rotation, speed], dtype=np.float32))
 
 
@@ -52,6 +56,7 @@ WAYPOINT_CONFIDENCE = 0.5  # number of readings required to be within tolerance
 WAYPOINTS = [
     (43.600189, -116.196871),  # N/W corner of field
     (43.600313, -116.197169),  # S/E corner of field
+    (43.600258, -116.196969),  # Middle of field
 ]
 
 
@@ -71,7 +76,7 @@ LINE_FOLLOWING = 'LINE_FOLLOWING'
 WAYPOINT_TRACKING = 'WAYPOINT_TRACKING'
 
 DEFAULT_STATE = {
-    'state': WAYPOINT_TRACKING,
+    'state': LINE_FOLLOWING,
     'tracking': 0
 }
 
@@ -84,7 +89,7 @@ def compute_next_state(state, gps_buffer):
     if state['state'] == LINE_FOLLOWING:
 
         # if we're within range of the first waypoint, start tracking it
-        if reached_waypoint(WAYPOINTS[0], gps_buffer, tolerance=FIRST_WAYPOINT_TOLERANCE):
+        if reached_waypoint(0, gps_buffer, tolerance=FIRST_WAYPOINT_TOLERANCE):
             rospy.loginfo('Begin tracking waypoint %s', 0)
             return {
                 'state': WAYPOINT_TRACKING,
@@ -113,8 +118,8 @@ def compute_next_state(state, gps_buffer):
     return state
 
 
-def update_control(msg, state):
-    """figures out what we need to do based on the current state map"""
+def update_control((msg, state)):
+    """figures out what we need to do based on the current state and map"""
     camera = msg['camera']
     lidar = msg['lidar']
     gps = msg['gps']
@@ -140,14 +145,14 @@ def update_control(msg, state):
     rospy.loginfo('translation = %s, rotation = %s', translation, rotation)
     update_drivetrain(translation, rotation, DEFAULT_SPEED)
 
-    debug.publish({
+    debug.publish(pickle.dumps({
         'camera': camera,
         'lidar': lidar,
         'gps': gps,
         'state': state,
         'translation': translation,
         'rotation': rotation
-    })
+    }))
 
 
 def main():
@@ -157,16 +162,16 @@ def main():
     control = rospy.Publisher('control', numpy_msg(Floats), queue_size=3)
     debug = rospy.Publisher('debug', String, queue_size=3)
 
-    nav = rx_subscribe(NAV_NODE)
-    gps = rx_subscribe(GPS_NODE).buffer_with_count(GPS_BUFFER, 1)
-
     # navigation state machine
-    state = gps.scan(compute_next_state, seed=DEFAULT_STATE)
+    state = rx_subscribe(GPS_NODE) \
+        .buffer_with_count(GPS_BUFFER, 1) \
+        .scan(compute_next_state, seed=DEFAULT_STATE)
 
-    # update the control node on change
-    Observable.combine_latest(nav, state, update_control) \
+    # update controls whenever the nav or state changes
+    nav = rx_subscribe(NAV_NODE)
+    Observable.combine_latest(nav, state, lambda n, s: (n, s)) \
         .throttle_first(1000.0 / GUIDANCE_HZ) \
-        .subscribe()
+        .subscribe(update_control)
 
     rospy.spin()
 
