@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+catkin_make
 source ./devel/setup.bash
 
 chmod +x src/navigation_launch/cameras.py
