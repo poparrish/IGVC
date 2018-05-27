@@ -328,6 +328,8 @@ float AvgDeltaTimeWheel3 = 10000001;
 int iWheel3;
 float DeltaTimeWheel3[40];
 
+float wh0avg = 100000;
+
 void counterWheel3() {
   // Need first pass logic to set the last interrupt time to get an accurate time between interrupts on the second pass
   if ((FirstPassWheel3 or backToZeroWheel3)) {
@@ -445,8 +447,6 @@ void setup() {
   pinMode(limit1, INPUT_PULLUP);
   pinMode(limit2, INPUT_PULLUP);
   pinMode(limit3, INPUT_PULLUP);
-
-  pinMode(safetyLight, OUTPUT);
   
   Serial.begin(250000); // sets up a serial interface to print to the monitor for debugging
   
@@ -469,6 +469,11 @@ void setup() {
   parsedCmdWheelArray[2] = parsedCmdWh2;
   parsedCmdWheelArray[3] = parsedCmdWh3;
 
+  digitalWrite(dirPinWheel0,0);
+  digitalWrite(dirPinWheel1,0);
+  digitalWrite(dirPinWheel2,0);
+  digitalWrite(dirPinWheel3,0);
+
 }
 
 //Inits for main loop
@@ -490,8 +495,8 @@ void setup() {
   int encoderPosWheel2 = 0; 
   int encoderPosWheel3 = 0;
 
-  boolean lightStatus = LOW;
 
+  boolean lightStatus = LOW;
 
   // inits for zeroing logic
 
@@ -504,6 +509,11 @@ void setup() {
   boolean unNotched1 = false;
   boolean unNotched2 = false;
   boolean unNotched3 = false;
+  
+  boolean dirSwap0 = false;
+  boolean dirSwap1 = false;
+  boolean dirSwap2 = false;
+  boolean dirSwap3 = false;
 
   float firstTrip0 = 1000;
   float secondTrip0 = 1000;
@@ -525,14 +535,10 @@ void loop() {
   */
   if (millis() - beginingTic  > 1000 / Hz)  
   {
-
-    
-
-    
-    // Serial.println("plan0angle"+String(int(encposWheel0)));
-     //Serial.println("plan1angle"+String(int(encposWheel1)));
-     //Serial.println("plan2angle"+String(int(encposWheel2)));
-     //Serial.println("plan3angle"+String(int(encposWheel3)));
+     Serial.println("plan0angle"+String(int(encposWheel0)));
+     Serial.println("plan1angle"+String(int(encposWheel1)));
+     Serial.println("plan2angle"+String(int(encposWheel2)));
+     Serial.println("plan3angle"+String(int(encposWheel3)));
 
     beginingTic = millis();// reset the the last time this was executed.
 
@@ -607,148 +613,229 @@ void loop() {
  /*
    * if wheelsZeroed is false we want to zero the wheels
    */
-//    Serial.print("limit0: ");
-//    Serial.println(digitalRead(limit0));
-//    Serial.print("limit1: ");
-//    Serial.println(digitalRead(limit1));
-//    Serial.print("limit2: ");
-//    Serial.println(digitalRead(limit2));
-//    Serial.print("limit3: ");
-//    Serial.println(digitalRead(limit3));
-//    if(wheelZeroed0 == false || wheelZeroed1 == false || wheelZeroed2 == false || wheelZeroed3 == false) {
-//      
-////       make sure not in notch
-//      if(unNotched0 == false || unNotched1 == false || unNotched2 == false || unNotched3 == false) {
-//        
-//        while(unNotched0 == false || unNotched1 == false || unNotched2 == false || unNotched3 == false) {
-//
-//          if(digitalRead(limit0) == 1) {
-//            unNotched0 = true;
-//            analogWrite(pwmPinWheel0, 0);
-//            digitalWrite(dirPinWheel0,1);
-//          }
-//          else {
-//            digitalWrite(dirPinWheel0,0);
-//            analogWrite(pwmPinWheel0,50);
-//          }
-//          if(digitalRead(limit1) == 1) {
-//            unNotched1 = true;
-//            analogWrite(pwmPinWheel1, 0);
-//            digitalWrite(dirPinWheel1,1);
-//          }
-//          else {
-//            digitalWrite(dirPinWheel1,0);
-//            analogWrite(pwmPinWheel1,50);
-//          }
-//          if(digitalRead(limit2) == 1) {
-//            unNotched2 = true;
-//            analogWrite(pwmPinWheel2, 0);
-//            digitalWrite(dirPinWheel2,1);
-//          }
-//          else {
-//            digitalWrite(dirPinWheel2,0);
-//            analogWrite(pwmPinWheel2,50);
-//          }
-//          if(digitalRead(limit3) == 1) {
-//            unNotched3 = true;
-//            analogWrite(pwmPinWheel3, 0);
-//            digitalWrite(dirPinWheel3,1);
-//          }
-//          else {
-//            digitalWrite(dirPinWheel3,0);
-//            analogWrite(pwmPinWheel3,50);
-//          }
-//          delay(25);
-//          analogWrite(pwmPinWheel0,0);
-//          analogWrite(pwmPinWheel1,0);
-//          analogWrite(pwmPinWheel2,0);
-//          analogWrite(pwmPinWheel3,0);
-//          
-//        }
-//      }
-//      
-//      analogWrite(pwmPinWheel0,50);
-//      analogWrite(pwmPinWheel1,50);
-//      analogWrite(pwmPinWheel2,50);
-//      analogWrite(pwmPinWheel3,50);
-//
-//      Serial.print("PLAN0 angle: ");
-//      Serial.println(returnVariablesWheel0.currentWheelAngle);
-//      
-//      if(firstTrip0 > 500.0 && digitalRead(limit0) == 0) {
-//        firstTrip0 = returnVariablesWheel0.currentWheelAngle+15;
-//      }
-//
-//      if(firstTrip0 < 500.0 && secondTrip0 > 500.0 && digitalRead(limit0) == 1) {
-//        secondTrip0 = returnVariablesWheel0.currentWheelAngle;
-//      }
-//
-//      if(firstTrip0 < 500.0 && secondTrip0 < 500.0) {
-//        parsedCmdWh0 = zeroParsedWheel(0,ceil((firstTrip0 + secondTrip0)/2));
-//
-//        parsedCmdWheelArray[0] = parsedCmdWh0;
-//
-//        analogWrite(pwmPinWheel0,0);
-//        
-//        wheelZeroed0 = true;
-//      }
-//      if(firstTrip1 > 500.0 && digitalRead(limit1) == 0) {
-//        firstTrip1 = returnVariablesWheel1.currentWheelAngle+15;
-//      }
-//
-//      if(firstTrip1 < 500.0 && secondTrip1 > 500.0 && digitalRead(limit1) == 1) {
-//        secondTrip1 = returnVariablesWheel1.currentWheelAngle;
-//      }
-//
-//      if(firstTrip1 < 500.0 && secondTrip1 < 500.0) {
-//        parsedCmdWh1 = zeroParsedWheel(1,ceil((firstTrip1 + secondTrip1)/2));
-//
-//        parsedCmdWheelArray[1] = parsedCmdWh1;
-//
-//        analogWrite(pwmPinWheel1,0);
-//        
-//        wheelZeroed1 = true;
-//      }
-//      if(firstTrip2 > 500.0 && digitalRead(limit2) == 0) {
-//        firstTrip2 = returnVariablesWheel2.currentWheelAngle+15;
-//      }
-//
-//      if(firstTrip2 < 500.0 && secondTrip2 > 500.0 && digitalRead(limit2) == 1) {
-//        secondTrip2 = returnVariablesWheel2.currentWheelAngle;
-//      }
-//
-//      if(firstTrip2 < 500.0 && secondTrip2 < 500.0) {
-//        parsedCmdWh2 = zeroParsedWheel(2,ceil((firstTrip2 + secondTrip2)/2));
-//
-//        parsedCmdWheelArray[2] = parsedCmdWh2;
-//
-//        analogWrite(pwmPinWheel2,0);
-//        
-//        wheelZeroed2 = true;
-//      }
-//      if(firstTrip3 > 500.0 && digitalRead(limit3) == 0) {
-//        firstTrip3 = returnVariablesWheel3.currentWheelAngle+15;
-//      }
-//
-//      if(firstTrip3 < 500.0 && secondTrip3 > 500.0 && digitalRead(limit3) == 1) {
-//        secondTrip3 = returnVariablesWheel3.currentWheelAngle;
-//      }
-//
-//      if(firstTrip3 < 500.0 && secondTrip3 < 500.0) {
-//        parsedCmdWh3 = zeroParsedWheel(3,ceil((firstTrip3 + secondTrip3)/2));
-//
-//        parsedCmdWheelArray[3] = parsedCmdWh3;
-//
-//        analogWrite(pwmPinWheel3,0);
-//        
-//        wheelZeroed3 = true;
-//      }    
-//    }
-//
-//
-////    create temp floats to store last value so that new data is only sent to the wheels once (no repeat)
-//
-//    if(wheelZeroed0 == true && wheelZeroed1 == true && wheelZeroed2 == true && wheelZeroed3 == true) {
+    Serial.print("limit0: ");
+    Serial.println(digitalRead(limit0));
+    Serial.print("limit1: ");
+    Serial.println(digitalRead(limit1));
+    Serial.print("limit2: ");
+    Serial.println(digitalRead(limit2));
+    Serial.print("limit3: ");
+    Serial.println(digitalRead(limit3));
+
+    Serial.print("plan 0 angle: ");
+    Serial.println(returnVariablesWheel0.currentWheelAngle);
+    Serial.print("plan 1 angle: ");
+    Serial.println(returnVariablesWheel1.currentWheelAngle);
+    Serial.print("plan 2 angle: ");
+    Serial.println(returnVariablesWheel2.currentWheelAngle);
+    Serial.print("plan 3 angle: ");
+    Serial.println(returnVariablesWheel3.currentWheelAngle);
+    
+    
+    if(wheelZeroed0 == false || wheelZeroed1 == false || wheelZeroed2 == false || wheelZeroed3 == false) {
+      analogWrite(pwmPinWheel0,0);
+      analogWrite(pwmPinWheel1,0);
+      analogWrite(pwmPinWheel2,0);
+      analogWrite(pwmPinWheel3,0);
+
+      digitalWrite(dirPinWheel0,dirSwap0);
+      digitalWrite(dirPinWheel1,dirSwap1);
+      digitalWrite(dirPinWheel2,dirSwap2);
+      digitalWrite(dirPinWheel3,dirSwap3);
+
+      if(unNotched0 == false || unNotched1 == false || unNotched2 == false || unNotched3 == false){
+        analogWrite(pwmPinWheel0,50);
+        analogWrite(pwmPinWheel1,50);
+        analogWrite(pwmPinWheel2,50);
+        analogWrite(pwmPinWheel3,50);
+
+        while(unNotched0 == false || unNotched1 == false || unNotched2 == false || unNotched3 == false) {
+          delay(50);
+          if(digitalRead(limit0) == 1) {
+            unNotched0 = true;
+            analogWrite(pwmPinWheel0,0);
+          }
+          if(digitalRead(limit1) == 1) {
+            unNotched1 = true;
+            analogWrite(pwmPinWheel1,0);
+          }
+          if(digitalRead(limit2) == 1) {
+            unNotched2 = true;
+            analogWrite(pwmPinWheel2,0);
+          }
+          if(digitalRead(limit3) == 1) {
+            unNotched3 = true;
+            analogWrite(pwmPinWheel3,0);
+          }
+        }
+        digitalWrite(dirPinWheel0,0);
+        digitalWrite(dirPinWheel1,0);
+        digitalWrite(dirPinWheel2,0);
+        digitalWrite(dirPinWheel3,0);
+      }
+      analogWrite(pwmPinWheel0,50);
+      analogWrite(pwmPinWheel1,50);
+      analogWrite(pwmPinWheel2,50);
+      analogWrite(pwmPinWheel3,50);
+
+      if(firstTrip0 > 500.0 && digitalRead(limit0) == 0) {
+        firstTrip0 = returnVariablesWheel0.currentWheelAngle;
+      }
+
+      if(firstTrip0 < 500.0 && secondTrip0 > 500.0 && digitalRead(limit0) == 1) {
+        secondTrip0 = returnVariablesWheel0.currentWheelAngle;
+        int dif = abs(firstTrip0 - secondTrip0);
+        if(dif < 30) {
+          secondTrip0 = 1000.0;
+        }
+      }
+
+      if(firstTrip0 < 500.0 && secondTrip0 < 500.0 ) {
+        float avg = (firstTrip0 + secondTrip0)/2;
+        if(firstTrip0 > 0 && secondTrip0 > 0){
+          parsedCmdWh0 = zeroParsedWheel(0,avg-8);
+        }
+        else if(firstTrip0 * secondTrip0 < 0){
+          parsedCmdWh0 = zeroParsedWheel(0,avg-10);
+        }
+        else {
+          wh0avg = 9;
+          parsedCmdWh0 = zeroParsedWheel(0,avg+11);
+        }
+
+        parsedCmdWheelArray[0] = parsedCmdWh0;
+
+        analogWrite(pwmPinWheel0,0);
+        
+        wheelZeroed0 = true;
+      }
+      
+      if((returnVariablesWheel0.currentWheelAngle > 170 || returnVariablesWheel0.currentWheelAngle < -170) && firstTrip0 > 500.0){
+         dirSwap0 = 1;
+      }
+      
+      if(firstTrip1 > 500.0 && digitalRead(limit1) == 0) {
+        firstTrip1 = returnVariablesWheel1.currentWheelAngle+15;
+      }
+
+      if(firstTrip1 < 500.0 && secondTrip1 > 500.0 && digitalRead(limit1) == 1) {
+        secondTrip1 = returnVariablesWheel1.currentWheelAngle;
+        int dif = abs(firstTrip1 - secondTrip1);
+        if(dif < 30) {
+          secondTrip1 = 999.0;
+        }
+      }
+
+      if(firstTrip1 < 500.0 && secondTrip1 < 500.0) {
+        float avg = (firstTrip1 + secondTrip1)/2;
+        if(firstTrip1 > 0 && secondTrip1 > 0){
+          parsedCmdWh1 = zeroParsedWheel(1,avg-30);
+        }
+        else if(firstTrip1 * secondTrip1 < 0){
+          parsedCmdWh1 = zeroParsedWheel(1,avg+3);
+        }
+        else {
+          parsedCmdWh1 = zeroParsedWheel(1,avg+5);
+        }
+
+        parsedCmdWheelArray[1] = parsedCmdWh1;
+
+        analogWrite(pwmPinWheel1,0);
+        
+        wheelZeroed1 = true;
+      }
+      if((returnVariablesWheel1.currentWheelAngle > 170 || returnVariablesWheel1.currentWheelAngle < -170) && firstTrip1 > 500.0){
+         dirSwap1 = 1;
+      }
+      
+      if(firstTrip2 > 500.0 && digitalRead(limit2) == 0) {
+        firstTrip2 = returnVariablesWheel2.currentWheelAngle;
+      }
+      if(firstTrip2 < 500.0 && secondTrip2 > 500.0 && digitalRead(limit2) == 1) {
+        secondTrip2 = returnVariablesWheel2.currentWheelAngle;
+        int dif = abs(firstTrip2 - secondTrip2);
+        if(dif < 30) {
+          secondTrip2 = 1000.0;
+        }
+      }
+      if(firstTrip2 < 500.0 && secondTrip2 < 500.0) {
+        float avg = (firstTrip2 + secondTrip2)/2;
+        if(firstTrip2 > 0 && secondTrip2 > 0){
+          parsedCmdWh2 = zeroParsedWheel(2,avg-13);
+        }
+        else if(firstTrip2 * secondTrip2 < 0){
+          parsedCmdWh2 = zeroParsedWheel(2,avg-6);
+        }
+        else {
+          parsedCmdWh2 = zeroParsedWheel(2,avg+10);
+        }
+
+        parsedCmdWheelArray[2] = parsedCmdWh2;
+
+        analogWrite(pwmPinWheel2,0);
+        
+        wheelZeroed2 = true;
+      }
+      if((returnVariablesWheel2.currentWheelAngle > 170 || returnVariablesWheel2.currentWheelAngle < -170) && firstTrip2 > 500.0){
+         dirSwap2 = 1;
+      }
+      if(firstTrip3 > 500.0 && digitalRead(limit3) == 0) {
+        firstTrip3 = returnVariablesWheel3.currentWheelAngle;
+      }
+
+      if(firstTrip3 < 500.0 && secondTrip3 > 500.0 && digitalRead(limit3) == 1) {
+        secondTrip3 = returnVariablesWheel3.currentWheelAngle;
+        int dif = abs(firstTrip3 - secondTrip3);
+        if(dif < 30) {
+          secondTrip3 = 1000.0;
+        }
+      }
+
+      if(firstTrip3 < 500.0 && secondTrip3 < 500.0) {
+        float avg = (firstTrip3 + secondTrip3)/2;
+        if(firstTrip3 > 0 && secondTrip3 > 0){
+          parsedCmdWh3 = zeroParsedWheel(3,avg-12);
+        }
+        else if(firstTrip3 * secondTrip3 < 0){
+          parsedCmdWh3 = zeroParsedWheel(3,avg-14);
+        }
+        else {
+          parsedCmdWh3 = zeroParsedWheel(3,avg+11);
+        }
+
+        parsedCmdWheelArray[3] = parsedCmdWh3;
+
+        analogWrite(pwmPinWheel3,0);
+        
+        wheelZeroed3 = true;
+      }    
+      if((returnVariablesWheel3.currentWheelAngle > 170 || returnVariablesWheel3.currentWheelAngle < -170) && firstTrip3 > 500.0){
+         dirSwap3 = 1;
+      }
+      
+      delay(25);
+    }
+      Serial.print("\nfirstTrip0: ");
+      Serial.println(firstTrip0);
+      Serial.print("secondTrip0: ");
+      Serial.println(secondTrip0);
+      Serial.print("\nfirstTrip1: ");
+      Serial.println(firstTrip1);
+      Serial.print("secondTrip1: ");
+      Serial.println(secondTrip1);
+      Serial.print("\nfirstTrip2: ");
+      Serial.println(firstTrip2);
+      Serial.print("secondTrip2: ");
+      Serial.println(secondTrip2);
+      Serial.print("\nfirstTrip3: ");
+      Serial.println(firstTrip3);
+      Serial.print("secondTrip3: ");
+      Serial.println(secondTrip3);
+      
+
+//    create temp floats to store last value so that new data is only sent to the wheels once (no repeat)
+
+   if(wheelZeroed0 == true && wheelZeroed1 == true && wheelZeroed2 == true && wheelZeroed3 == true) {
 
     
     // if it changes to something above 50
@@ -816,10 +903,11 @@ void loop() {
      analogWrite(pwmPinWheel3, returnVariablesWheel3.motorSpeed);
      digitalWrite(dirPinWheel3, returnVariablesWheel3.planMotorDirection);
      //Serial.println("plan3angle"+String(int(returnVariablesWheel3.currentWheelAngle)));
+     
 
 
-    
-    //blink the safety light
+
+//blink the safety light
     if(millis() - blinkTic > 1000 / blinkHz){
       if((returnVariablesWheel0.speedCheck > 5)){//moving
         Serial.println("Moving");
@@ -839,7 +927,6 @@ void loop() {
     digitalWrite(safetyLight, lightStatus);
     //digitalWrite(safetyLight, HIGH);
      
-
 //WRITE TO SERIAL CURRENT PLANETARY ANGLE
 
 //     Serial.println("_"+String(int(returnVariablesWheel0.currentWheelAngle))+
@@ -851,7 +938,7 @@ void loop() {
     printWheelDesired(parsedCmdWheelArray[1]);
     printWheelDesired(parsedCmdWheelArray[2]);
     printWheelDesired(parsedCmdWheelArray[3]);
-  //}
+  }
     
 // output data back to other processor through serial transfer software (still to be written)
 /*
@@ -898,4 +985,3 @@ void loop() {
   }
   
 }
-
