@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import numpy as np
 import rospy
 from rospy.numpy_msg import numpy_msg
