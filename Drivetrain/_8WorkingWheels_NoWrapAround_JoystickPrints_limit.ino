@@ -15,6 +15,7 @@
 
 //Inits for all methods
 int Hz = 20; //cycle time for main processing
+int blinkHz = 3; //blink rate for safety light
 
 //Creating what is needed to parse commands
 
@@ -108,7 +109,8 @@ struct parsedCmd parseRxCmd(String inputString)
   return toReturn;
 }
 
-
+//init for safety light
+unsigned long blinkTic = millis();
 // Inits for wheel 0 HUB motor interrupt routine
 
 unsigned long beginingTicWheel0 = millis();
@@ -494,6 +496,7 @@ void setup() {
   int encoderPosWheel3 = 0;
 
 
+  boolean lightStatus = LOW;
 
   // inits for zeroing logic
 
@@ -902,6 +905,28 @@ void loop() {
      //Serial.println("plan3angle"+String(int(returnVariablesWheel3.currentWheelAngle)));
      
 
+
+
+//blink the safety light
+    if(millis() - blinkTic > 1000 / blinkHz){
+      if((returnVariablesWheel0.speedCheck > 5)){//moving
+        Serial.println("Moving");
+        if(lightStatus == HIGH){//off and needs to go on
+          //blinkTic = millis();
+          lightStatus = LOW;
+        }else{//on and needs to go off
+          //blinkTic = millis();
+          lightStatus = HIGH;
+        }
+      }else{//stopped so turn on
+        Serial.println("notMoving");
+        lightStatus = LOW;
+      }
+    blinkTic = millis();
+    }
+    digitalWrite(safetyLight, lightStatus);
+    //digitalWrite(safetyLight, HIGH);
+     
 //WRITE TO SERIAL CURRENT PLANETARY ANGLE
 
 //     Serial.println("_"+String(int(returnVariablesWheel0.currentWheelAngle))+
