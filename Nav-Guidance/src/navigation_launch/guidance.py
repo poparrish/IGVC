@@ -90,7 +90,7 @@ def compute_next_state(state, gps_buffer):
 
         # if we're within range of the first waypoint, start tracking it
         if reached_waypoint(0, gps_buffer, tolerance=FIRST_WAYPOINT_TOLERANCE):
-            rospy.loginfo('Begin tracking waypoint %s', 0)
+            rospy.loginfo('Begin tracking first waypoint')
             return {
                 'state': WAYPOINT_TRACKING,
                 'tracking': 0
@@ -104,15 +104,16 @@ def compute_next_state(state, gps_buffer):
 
             # ... unless we are at the last one, in which case we should resume normal navigation
             if tracking == len(WAYPOINTS) - 1:
-                rospy.loginfo('Reached all waypoints, resuming normal operation', 0)
+                rospy.loginfo('Reached all waypoints, resuming normal operation')
                 return {
                     'state': LINE_FOLLOWING
                 }
 
-            rospy.loginfo('Begin tracking waypoint %s', 0)
+            next = tracking + 1
+            rospy.loginfo('Begin tracking waypoint %s', next)
             return {
                 'state': WAYPOINT_TRACKING,
-                'tracking': tracking + 1
+                'tracking': next
             }
 
     return state
