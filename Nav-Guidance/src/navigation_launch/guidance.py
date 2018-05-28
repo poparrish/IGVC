@@ -150,6 +150,7 @@ def update_control((msg, state)):
         'lidar': lidar,
         'gps': gps,
         'state': state,
+        'goal': goal,
         'translation': translation,
         'rotation': rotation
     }))
