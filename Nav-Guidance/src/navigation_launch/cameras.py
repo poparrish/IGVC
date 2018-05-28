@@ -6,12 +6,12 @@ import cv2
 import numpy as np
 from grip import GripPipelineTest
 from camera_info import CameraInfo
+
 '''
 Configuration stuff
 
 '''
 cam1num = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
-cam = cv2.VideoCapture(cam1num)
 grip = GripPipelineTest()
 
 CAMERA_NODE = "CAMERA"
@@ -24,7 +24,8 @@ can_traverse_thresh_hue=[0, 40]
 can_traverse_thresh_sat=[0, 155]
 can_traverse_thresh_val=[20, 255]
 
-def processImage(camera_info):
+
+def processImage(cam, camera_info):
     ret_val, img = cam.read()
     flat_map = camera_info.convertToFlat(img)
     local_map = np.zeros_like(flat_map)
@@ -38,13 +39,16 @@ def processImage(camera_info):
     # cv2.imshow('flat_map', flat_map)
     return local_map, line_contours
 
+
 def cameraProcessor():
+    cam = cv2.VideoCapture(cam1num)
+
     pub = rospy.Publisher(CAMERA_NODE, String, queue_size=10)
     rospy.init_node(CAMERA_NODE)
     rate = rospy.Rate(10) # 10hz 
     camera_info = CameraInfo(36.5, 33, 52, 83, 103)        
     while not rospy.is_shutdown():
-        local_map, contours  = processImage(camera_info)
+        local_map, contours = processImage(cam, camera_info)
         # local_map = np.zeros([3,3,3])
         local_map_msg = CameraMsg(local_map_val = local_map, contours = contours, camera_info = camera_info)
         local_map_msg_string = local_map_msg.pickleMe()
@@ -57,6 +61,7 @@ def cameraProcessor():
         rate.sleep()
     
     cv2.destroyAllWindows()
+
 
 if __name__ == '__main__':
     try:
