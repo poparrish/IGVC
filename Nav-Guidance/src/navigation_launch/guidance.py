@@ -52,7 +52,7 @@ GPS_BUFFER = 20  # buffer GPS messages to help with accuracy
 FIRST_WAYPOINT_TOLERANCE = 10  # when to start tracking the first waypoint
 
 WAYPOINT_TOLERANCE = 1  # precision in meters
-WAYPOINT_CONFIDENCE = 0.5  # number of readings required to be within tolerance
+WAYPOINT_CONFIDENCE = 0.5  # percent of readings required to be within tolerance
 WAYPOINTS = [
     (43.600189, -116.196871),  # N/W corner of field
     (43.600313, -116.197169),  # S/E corner of field
@@ -167,8 +167,13 @@ def main():
         .buffer_with_count(GPS_BUFFER, 1) \
         .scan(compute_next_state, seed=DEFAULT_STATE)
 
+    # we randomly seem to get garbage messages that are only partially unpickled
+    # ignore them until we can figure out what's going on
+    def valid_message(msg):
+        return not isinstance(msg['camera'], basestring)
+
     # update controls whenever the nav or state changes
-    nav = rx_subscribe(NAV_NODE)
+    nav = rx_subscribe(NAV_NODE).filter(valid_message)
     Observable.combine_latest(nav, state, lambda n, s: (n, s)) \
         .throttle_first(1000.0 / GUIDANCE_HZ) \
         .subscribe(update_control)

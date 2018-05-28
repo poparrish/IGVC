@@ -25,11 +25,11 @@ def main():
     rospy.init_node(NAV_NODE)
     pub = rospy.Publisher(NAV_NODE, String, queue_size=10)
 
-    camera = rx_subscribe(CAMERA_NODE, String, pickle.loads)
-    lidar = rx_subscribe(LIDAR_NODE, String, pickle.loads)
+    camera = rx_subscribe(CAMERA_NODE)
+    lidar = rx_subscribe(LIDAR_NODE)
     # camera = BehaviorSubject(CameraMsg(contours=[]))
     # lidar = BehaviorSubject([])
-    gps = rx_subscribe(GPS_NODE, String, pickle.loads)
+    gps = rx_subscribe(GPS_NODE)
 
     rospy.loginfo('Nav waiting for messages...')
     combined = Observable.combine_latest(camera, lidar, gps, process_state) \
