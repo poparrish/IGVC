@@ -1,0 +1,5 @@
+#fore real values
+#line_thresh_hue=[58,  180]
+#line_thresh_sat=[0, 77]
+#line_thresh_val=[94, 255]
+

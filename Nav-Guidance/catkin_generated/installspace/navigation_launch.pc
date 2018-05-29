@@ -1,0 +1,8 @@
+prefix=/usr/local
+
+Name: navigation_launch
+Description: Description of navigation_launch
+Version: 0.0.0
+Cflags: 
+Libs: -L/usr/local/lib 
+Requires: 

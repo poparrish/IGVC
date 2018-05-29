@@ -32,7 +32,7 @@ def convert_scan_to_vectors(scan):
 
 def start_lidar(device):
     rospy.init_node(LIDAR_NODE)
-    pub = rospy.Publisher(LIDAR_NODE, String, queue_size=10)
+    pub = rospy.Publisher(LIDAR_NODE, String, queue_size=1)
 
     lidar = RPLidar(device)
     lidar.set_pwm(MAX_MOTOR_PWM)  # set to full speed

@@ -16,7 +16,7 @@ from util import Vec2d
 from util.vec2d import to180
 
 GUIDANCE_NODE = "GUIDANCE"
-GUIDANCE_HZ = 5
+GUIDANCE_HZ = 10 
 
 #
 # Drivetrain
@@ -54,9 +54,10 @@ FIRST_WAYPOINT_TOLERANCE = 10  # when to start tracking the first waypoint
 WAYPOINT_TOLERANCE = 1  # precision in meters
 WAYPOINT_CONFIDENCE = 0.5  # percent of readings required to be within tolerance
 WAYPOINTS = [
-    (43.600189, -116.196871),  # N/W corner of field
-    (43.600313, -116.197169),  # S/E corner of field
-    (43.600258, -116.196969),  # Middle of field
+    (0,0),
+    #(43.600189, -116.196871),  # N/W corner of field
+    #(43.600313, -116.197169),  # S/E corner of field
+    #(43.600258, -116.196969),  # Middle of field
 ]
 
 

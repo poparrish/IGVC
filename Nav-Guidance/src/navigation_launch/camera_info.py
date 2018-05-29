@@ -32,5 +32,10 @@ class CameraInfo:
         pts_dst = np.float32([[0, 0],[self.map_width,0],[left_trim, self.map_height],[right_trim, self.map_height]])
         mtx = cv2.getPerspectiveTransform(pts_src,pts_dst)
         flat_map = cv2.warpPerspective(image, mtx, (self.map_width, self.map_height))
-        
+        cv2.rectangle(flat_map, (155,155), (260,200), (0,0,0), -1) 
         return flat_map
+
+    def flattenContours(self, contours):
+        for c in contours:
+            for p in c:
+                print p

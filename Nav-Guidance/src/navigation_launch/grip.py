@@ -13,20 +13,20 @@ class GripPipelineTest:
         """
 
         self.__blur_0_type = BlurType.Median_Filter
-        self.__blur_0_radius = 4
+        self.__blur_0_radius =5 
 
         self.blur_0_output = None
 
         self.__hsv_threshold_input = self.blur_0_output
-        self.__hsv_threshold_hue = [52, 105]
-        self.__hsv_threshold_saturation = [0, 129]
-        self.__hsv_threshold_value = [177, 255]
+        self.__hsv_threshold_hue = [0, 180]
+        self.__hsv_threshold_saturation = [0, 20]
+        self.__hsv_threshold_value = [73, 255]
 
         self.hsv_threshold_output = None
 
         self.__blur_1_input = self.hsv_threshold_output
         self.__blur_1_type = BlurType.Gaussian_Blur
-        self.__blur_1_radius = 3
+        self.__blur_1_radius = 5
 
         self.blur_1_output = None
 
@@ -42,7 +42,7 @@ class GripPipelineTest:
         self.__filter_contours_max_width = 1000
         self.__filter_contours_min_height = 0
         self.__filter_contours_max_height = 1000
-        self.__filter_contours_solidity = [16, 100]
+        self.__filter_contours_solidity = [21, 100]
         self.__filter_contours_max_vertices = 1000000
         self.__filter_contours_min_vertices = 0
         self.__filter_contours_min_ratio = 0
