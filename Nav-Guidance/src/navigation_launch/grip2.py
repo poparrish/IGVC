@@ -1,6 +1,7 @@
 import cv2
 import numpy
 import math
+import json
 from enum import Enum
 
 class GripPipelineTest:
@@ -12,23 +13,28 @@ class GripPipelineTest:
         """initializes all values to presets or None if need to be set
         """
 
+	file_name = "configs.json"
+
+	with open ("configs.json") as configfile:
+	  data = "".join(configfile.readlines()).replace('\n','')
+	
+	chosen_config = "1"
+	cd = data[chosen_config]
         self.__blur_0_type = BlurType.Median_Filter
         self.__blur_0_radius = 5
 
         self.blur_0_output = None
 
         self.__rgb_threshold_input = self.blur_0_output
-        self.__rgb_threshold_red = [180, 255]
-        self.__rgb_threshold_green = [227, 255.0]
-        self.__rgb_threshold_blue = [145, 196.0]
-
+        self.__rgb_threshold_red = [cd["rval_low", cd["rval_high"]]
+        self.__rgb_threshold_green = [cd["gval_low", cd["gval_high"]]
+        self.__rgb_threshold_blue = [cd["bval_low", cd["bval_high"]]
         self.rgb_threshold_output = None
 
         self.__hsv_threshold_input = self.blur_0_output
-        self.__hsv_threshold_hue = [32, 65]
-        self.__hsv_threshold_saturation = [30, 98]
-        self.__hsv_threshold_value = [154, 255.0]
-
+        self.__hsv_threshold_hue = [cd["hval_low", cd["hval_high"]]
+        self.__hsv_threshold_saturation = [cd["sval_low", cd["sval_high"]]
+        self.__hsv_threshold_value = [cd["vval_low", cd["vval_high"]]
         self.hsv_threshold_output = None
 
         self.__cv_addweighted_src1 = self.rgb_threshold_output
