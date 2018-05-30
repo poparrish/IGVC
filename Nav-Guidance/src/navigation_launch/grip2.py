@@ -13,7 +13,7 @@ class GripPipelineTest:
         """initializes all values to presets or None if need to be set
         """
 
-	file_name = "cameraconfig/configs.json"
+	file_name = "/home/bender/IGVC/Nav-Guidance/src/navigation_launch/cameraconfig/configs.json"
 
 	with open (file_name) as configfile:
 	  data = "".join(configfile.readlines()).replace('\n','')

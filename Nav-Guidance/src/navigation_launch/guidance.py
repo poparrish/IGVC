@@ -22,7 +22,7 @@ GUIDANCE_HZ = 10
 # Drivetrain
 #
 
-INITIAL_SPEED = 2.5  # gotta go FAST
+INITIAL_SPEED =0.5  # gotta go FAST
 INITIAL_DISTANCE_CUTOFF = 5000  # slow down once we're within 5m of something
 
 NORMAL_SPEED = .5  # forward speed in m/s
@@ -95,8 +95,10 @@ def compute_next_state(state, (nav, gps_buffer)):
     speed = state['speed']
     if speed == INITIAL_SPEED:
         clusters = partition(nav['lidar'], cluster_mm=500)
-        closest = min([avg(c) for c in clusters], key=lambda v: v.mag)
-
+        if len(clusters) > 0:
+            closest = min([c for c in clusters], key=lambda v: v.mag)
+        else:
+            closest = 100000000
         if closest < INITIAL_DISTANCE_CUTOFF:
             speed = NORMAL_SPEED
             state['speed'] = speed
@@ -161,7 +163,14 @@ def update_control((msg, state)):
     potential = calculate_potential(lidar, camera, goal)
     translation = to180(potential.angle)
 
-    rospy.loginfo('translation = %s, rotation = %s', translation, rotation)
+    rospy.loginfo('translation = %s, rotation = %s, speed = %s', translation, rotation, state['speed'])
+
+    # don't rotate if bender needs to translate away from a line
+    translation_threshhold = 60
+    rotation_throttle = 0
+    if np.absolute(translation) > translation_threshhold:
+        rotation = rotation * rotation_throttle
+
     update_drivetrain(translation, rotation, state['speed'])
 
     debug.publish(pickle.dumps({
@@ -195,7 +204,7 @@ def main():
     state = Observable.combine_latest(nav, gps, lambda n, g: (n, g)) \
         .scan(compute_next_state, seed=DEFAULT_STATE)
 
-    state.subscribe(update_control)
+    Observable.combine_latest(nav, state, lambda s, g: (s, g)).subscribe(update_control)
 
     rospy.spin()
 

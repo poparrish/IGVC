@@ -1,3 +1,29 @@
 {
-"1": {"rval_low": 180, "gval_low": 227, "bval_low": 145, "rval_high": 255, "gval_high": 255, "bval_high":196, "hval_low": 32, "sval_low": 30, "vval_low": 154, "hval_high": 65, "sval_high": 98, "vval_high":255}
+"1": {"rval_low": 168, "gval_low": 183, "bval_low": 161, "rval_high": 255, "gval_high": 255, "bval_high":255, "hval_low": 19, "sval_low": 0, "vval_low": 138, "hval_high": 39, "sval_high": 56, "vval_high":255},
+"9am": {
+	"rval_low": 168, "rval_high": 255,
+	"gval_low": 163, "gval_high": 255,
+	"bval_low": 161, "bval_high": 255,
+	"hval_low": 19,  "hval_high": 49,
+	"sval_low": 0,   "sval_high": 48,
+	"vval_low": 133, "vval_high": 255
+},
+
+"10am": {
+	"rval_low": 168, "rval_high": 255,
+	"gval_low": 163, "gval_high": 255,
+	"bval_low": 161, "bval_high": 255,
+	"hval_low": 19,  "hval_high": 49,
+	"sval_low": 0,   "sval_high": 65,
+	"vval_low": 133, "vval_high": 255
+},
+
+"11am": {
+	"rval_low": 168, "rval_high": 255,
+	"gval_low": 183, "gval_high": 255,
+	"bval_low": 161, "bval_high": 255,
+	"hval_low": 19,  "hval_high": 39,
+	"sval_low": 0,   "sval_high": 56,
+	"vval_low": 138, "vval_high": 255
+}
 }

@@ -61,3 +61,6 @@ def calculate_line_angle(contours):
 
     [slope, intercept] = np.polyfit(x, y, 1)
     return math.degrees(math.atan(slope))
+
+# def calc_crab_away(contours):
+    
