@@ -37,7 +37,3 @@ class CameraInfo:
         cv2.rectangle(flat_map, (155,135), (260,200), (0,0,0), -1) 
         return flat_map
 
-    def flattenContours(self, contours):
-        for c in contours:
-            for p in c:
-                print p
