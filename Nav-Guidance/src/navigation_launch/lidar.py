@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import pickle
 
+import time
 import rospy
 from rplidar import RPLidar, MAX_MOTOR_PWM
 from std_msgs.msg import String
@@ -35,6 +36,13 @@ def start_lidar(device):
     pub = rospy.Publisher(LIDAR_NODE, String, queue_size=1)
 
     lidar = RPLidar(device)
+    lidar.stop_motor()
+    time.sleep(1)
+
+    lidar.set_pwm(MAX_MOTOR_PWM)
+    lidar._serial_port.setDTR(False)
+    lidar.set_pwm(MAX_MOTOR_PWM)
+
     # lidar.set_pwm(MAX_MOTOR_PWM)  # set to full speed
 
     while not rospy.is_shutdown():

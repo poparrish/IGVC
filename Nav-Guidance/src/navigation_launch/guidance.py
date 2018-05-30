@@ -11,18 +11,21 @@ from std_msgs.msg import String
 from gps import GPS_NODE
 from guidance import calculate_potential, ATTRACTOR_THRESHOLD_MM, calculate_line_angle
 from guidance.gps_guidance import dist_to_waypoint, calculate_gps_heading
+from guidance.potential_field import partition
 from nav import rx_subscribe, NAV_NODE
-from util import Vec2d
-from util.vec2d import to180
+from util import Vec2d, avg, to180
 
 GUIDANCE_NODE = "GUIDANCE"
-GUIDANCE_HZ = 10 
+GUIDANCE_HZ = 10
 
 #
 # Drivetrain
 #
 
-DEFAULT_SPEED = .8  # forward speed in m/s
+INITIAL_SPEED = 2.5  # gotta go FAST
+INITIAL_DISTANCE_CUTOFF = 5000  # slow down once we're within 5m of something
+
+NORMAL_SPEED = .5  # forward speed in m/s
 MAX_ROTATION = 30  # max crabbing angle
 MAX_TRANSLATION = 90  # max crabbing angle
 
@@ -54,10 +57,10 @@ FIRST_WAYPOINT_TOLERANCE = 10  # when to start tracking the first waypoint
 WAYPOINT_TOLERANCE = 1  # precision in meters
 WAYPOINT_CONFIDENCE = 0.5  # percent of readings required to be within tolerance
 WAYPOINTS = [
-    (0,0),
-    #(43.600189, -116.196871),  # N/W corner of field
-    #(43.600313, -116.197169),  # S/E corner of field
-    #(43.600258, -116.196969),  # Middle of field
+    (10, 10),  # bogus waypoint that we'll never get close to (and therefore never trigger waypoint navigation)
+    # (43.600189, -116.196871),  # N/W corner of field
+    # (43.600313, -116.197169),  # S/E corner of field
+    # (43.600258, -116.196969),  # Middle of field
 ]
 
 
@@ -78,14 +81,25 @@ WAYPOINT_TRACKING = 'WAYPOINT_TRACKING'
 
 DEFAULT_STATE = {
     'state': LINE_FOLLOWING,
+    'speed': INITIAL_SPEED,
     'tracking': 0
 }
 
 debug = None
 
 
-def compute_next_state(state, gps_buffer):
+def compute_next_state(state, (nav, gps_buffer)):
     """guidance state machine"""
+
+    # check if we need to slow down
+    speed = state['speed']
+    if speed == INITIAL_SPEED:
+        clusters = partition(nav['lidar'], cluster_mm=500)
+        closest = min([avg(c) for c in clusters], key=lambda v: v.mag)
+
+        if closest < INITIAL_DISTANCE_CUTOFF:
+            speed = NORMAL_SPEED
+            state['speed'] = speed
 
     if state['state'] == LINE_FOLLOWING:
 
@@ -94,6 +108,7 @@ def compute_next_state(state, gps_buffer):
             rospy.loginfo('Begin tracking first waypoint')
             return {
                 'state': WAYPOINT_TRACKING,
+                'speed': state['speed'],
                 'tracking': 0
             }
 
@@ -107,13 +122,15 @@ def compute_next_state(state, gps_buffer):
             if tracking == len(WAYPOINTS) - 1:
                 rospy.loginfo('Reached all waypoints, resuming normal operation')
                 return {
-                    'state': LINE_FOLLOWING
+                    'state': LINE_FOLLOWING,
+                    'speed': state['speed'],
                 }
 
             next = tracking + 1
             rospy.loginfo('Begin tracking waypoint %s', next)
             return {
                 'state': WAYPOINT_TRACKING,
+                'speed': state['speed'],
                 'tracking': next
             }
 
@@ -145,7 +162,7 @@ def update_control((msg, state)):
     translation = to180(potential.angle)
 
     rospy.loginfo('translation = %s, rotation = %s', translation, rotation)
-    update_drivetrain(translation, rotation, DEFAULT_SPEED)
+    update_drivetrain(translation, rotation, state['speed'])
 
     debug.publish(pickle.dumps({
         'camera': camera,
@@ -165,21 +182,20 @@ def main():
     control = rospy.Publisher('control', numpy_msg(Floats), queue_size=3)
     debug = rospy.Publisher('debug', String, queue_size=3)
 
-    # navigation state machine
-    state = rx_subscribe(GPS_NODE) \
-        .buffer_with_count(GPS_BUFFER, 1) \
-        .scan(compute_next_state, seed=DEFAULT_STATE)
+    gps = rx_subscribe(GPS_NODE).buffer_with_count(GPS_BUFFER, 1)
 
     # we randomly seem to get garbage messages that are only partially unpickled
     # ignore them until we can figure out what's going on
     def valid_message(msg):
         return not isinstance(msg['camera'], basestring)
 
-    # update controls whenever the nav or state changes
     nav = rx_subscribe(NAV_NODE).filter(valid_message)
-    Observable.combine_latest(nav, state, lambda n, s: (n, s)) \
-        .throttle_first(1000.0 / GUIDANCE_HZ) \
-        .subscribe(update_control)
+
+    # update controls whenever the nav or gps changes
+    state = Observable.combine_latest(nav, gps, lambda n, g: (n, g)) \
+        .scan(compute_next_state, seed=DEFAULT_STATE)
+
+    state.subscribe(update_control)
 
     rospy.spin()
 

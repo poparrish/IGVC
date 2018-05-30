@@ -3,7 +3,7 @@ from util import Vec2d, avg
 ATTRACTOR_THRESHOLD_MM = 1500
 REPULSOR_THRESHOLD_MM = 1500
 
-R_FACTOR = 1.0 / (300 ** 2)  # 750 is the distance at which the repulsors should start to overpower the attractors
+R_FACTOR = 1.0 / (400 ** 2)  # 750 is the distance at which the repulsors should start to overpower the attractors
 A_FACTOR = 25.0 / (1500 ** 2)  # dumb hack to ensure 25
 
 NOISE_THRESHOLD = 5
