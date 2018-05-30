@@ -45,9 +45,11 @@ def start_gps(device):
         if pevent.trigger():
             loc = get_location(mav)
             if loc is not None:
+                print(loc['lat'], loc['lon'])
                 rospy.loginfo('Publishing gps %s' % loc)
                 pub.publish(pickle.dumps(loc))
 
+        #why this and not ros.wait()
         time.sleep(0.01)
 
 

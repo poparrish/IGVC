@@ -31,6 +31,7 @@ MAX_TRANSLATION = 90  # max crabbing angle
 
 control = None
 
+state_debug = rospy.Publisher('state', String, queue_size=3)
 
 def update_drivetrain(translation, rotation, speed):
     translation = max(-MAX_TRANSLATION, min(translation, MAX_TRANSLATION))
@@ -57,17 +58,20 @@ FIRST_WAYPOINT_TOLERANCE = 10  # when to start tracking the first waypoint
 WAYPOINT_TOLERANCE = 1  # precision in meters
 WAYPOINT_CONFIDENCE = 0.5  # percent of readings required to be within tolerance
 WAYPOINTS = [
-    (10, 10),  # bogus waypoint that we'll never get close to (and therefore never trigger waypoint navigation)
+    # (10, 10),  # bogus waypoint that we'll never get close to (and therefore never trigger waypoint navigation)
     # (43.600189, -116.196871),  # N/W corner of field
     # (43.600313, -116.197169),  # S/E corner of field
     # (43.600258, -116.196969),  # Middle of field
+    {43.6002692, -116.197187},
+    {43.6002610, -116.197069},
+    {43.6002692, -116.197187}
 ]
 
 
 def reached_waypoint(waypoint, gps_buffer, tolerance=WAYPOINT_TOLERANCE):
     waypoint = WAYPOINTS[waypoint]
     distances = [dist_to_waypoint(loc, waypoint) for loc in gps_buffer]
-
+    state_debug.publish(str(distances))
     within_tolerance = sum(1 for d in distances if d < tolerance)
     return within_tolerance / float(len(distances)) > WAYPOINT_CONFIDENCE
 
@@ -90,7 +94,57 @@ debug = None
 
 def compute_next_state(state, (nav, gps_buffer)):
     """guidance state machine"""
+    state_debug.publish(state['state'])
+    # check if we need to slow down
+    speed = state['speed']
+    if speed == INITIAL_SPEED:
+        clusters = partition(nav['lidar'], cluster_mm=500)
+        if len(clusters) > 0:
+            closest = min([c for c in clusters], key=lambda v: v.mag)
+        else:
+            closest = 100000000
+        if closest < INITIAL_DISTANCE_CUTOFF:
+            speed = NORMAL_SPEED
+            state['speed'] = speed
 
+    if state['state'] == LINE_FOLLOWING:
+
+        # if we're within range of the first waypoint, start tracking it
+        if reached_waypoint(0, gps_buffer, tolerance=FIRST_WAYPOINT_TOLERANCE):
+            rospy.loginfo('Begin tracking first waypoint')
+            return {
+                'state': WAYPOINT_TRACKING,
+                'speed': state['speed'],
+                'tracking': 0
+            }
+
+    if state['state'] == WAYPOINT_TRACKING:
+        tracking = state['tracking']
+
+        # if we've reached the current waypoint, start tracking the next one
+        if reached_waypoint(tracking, gps_buffer):
+
+            # ... unless we are at the last one, in which case we should resume normal navigation
+            if tracking == len(WAYPOINTS) - 1:
+                rospy.loginfo('Reached all waypoints, resuming normal operation')
+                return {
+                    'state': LINE_FOLLOWING,
+                    'speed': state['speed'],
+                }
+
+            next = tracking + 1
+            rospy.loginfo('Begin tracking waypoint %s', next)
+            return {
+                'state': WAYPOINT_TRACKING,
+                'speed': state['speed'],
+                'tracking': next
+            }
+
+    return state
+
+def compute_next_state2((state, nav, gps_buffer)):
+    """guidance state machine"""
+    state_debug.publish(state['state'])
     # check if we need to slow down
     speed = state['speed']
     if speed == INITIAL_SPEED:
@@ -183,14 +237,13 @@ def update_control((msg, state)):
         'rotation': rotation
     }))
 
-
 def main():
     global control, debug
 
     rospy.init_node(GUIDANCE_NODE)
     control = rospy.Publisher('control', numpy_msg(Floats), queue_size=3)
     debug = rospy.Publisher('debug', String, queue_size=3)
-
+    
     gps = rx_subscribe(GPS_NODE).buffer_with_count(GPS_BUFFER, 1)
 
     # we randomly seem to get garbage messages that are only partially unpickled
@@ -205,6 +258,8 @@ def main():
         .scan(compute_next_state, seed=DEFAULT_STATE)
 
     Observable.combine_latest(nav, state, lambda s, g: (s, g)).subscribe(update_control)
+
+    Observable.combine_latest(state, nav, gps, lambda s, n, g: (s, n, g)).subscribe(compute_next_state2)
 
     rospy.spin()
 
