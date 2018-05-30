@@ -3,7 +3,7 @@ from util import Vec2d, avg
 ATTRACTOR_THRESHOLD_MM = 1500
 REPULSOR_THRESHOLD_MM = 1500
 
-R_FACTOR = 1.0 / (400 ** 2)  # 750 is the distance at which the repulsors should start to overpower the attractors
+R_FACTOR = 1.0 / (300 ** 2)  # 750 is the distance at which the repulsors should start to overpower the attractors
 A_FACTOR = 25.0 / (1500 ** 2)  # dumb hack to ensure 25
 
 NOISE_THRESHOLD = 5
@@ -67,6 +67,6 @@ def calculate_potential(lidar_data, camera_data, goal, position=zero):
     a = calc_attractive_force(goal, position)
 
     rl = sum_repulsors(lidar_data, position, cluster_mm=150, weight=2)
-    rc = sum_repulsors([v for c in camera_data for v in c], position, cluster_mm=500, weight=1)
+    rc = sum_repulsors([v for c in camera_data for v in c], position, cluster_mm=500, weight=2)
 
     return a - rl - rc

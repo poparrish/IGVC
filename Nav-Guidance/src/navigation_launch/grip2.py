@@ -29,14 +29,12 @@ class GripPipelineTest:
         self.__rgb_threshold_red = [cd["rval_low", cd["rval_high"]]
         self.__rgb_threshold_green = [cd["gval_low", cd["gval_high"]]
         self.__rgb_threshold_blue = [cd["bval_low", cd["bval_high"]]
-
         self.rgb_threshold_output = None
 
         self.__hsv_threshold_input = self.blur_0_output
         self.__hsv_threshold_hue = [cd["hval_low", cd["hval_high"]]
         self.__hsv_threshold_saturation = [cd["sval_low", cd["sval_high"]]
         self.__hsv_threshold_value = [cd["vval_low", cd["vval_high"]]
-
         self.hsv_threshold_output = None
 
         self.__cv_addweighted_src1 = self.rgb_threshold_output
@@ -49,7 +47,7 @@ class GripPipelineTest:
 
         self.__blur_1_input = self.cv_addweighted_output
         self.__blur_1_type = BlurType.Gaussian_Blur
-        self.__blur_1_radius = 3
+        self.__blur_1_radius = 4
 
         self.blur_1_output = None
 
@@ -59,7 +57,7 @@ class GripPipelineTest:
         self.find_contours_output = None
 
         self.__filter_contours_contours = self.find_contours_output
-        self.__filter_contours_min_area = 850
+        self.__filter_contours_min_area = 1500
         self.__filter_contours_min_perimeter = 0
         self.__filter_contours_min_width = 0
         self.__filter_contours_max_width = 1000000
