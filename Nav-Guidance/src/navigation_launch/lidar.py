@@ -12,8 +12,8 @@ LIDAR_NODE = 'LIDAR'
 MIN_DIST_MM = 100
 MAX_DIST_MM = 2000
 
-ANGLE_IGNORE_START = 120
-ANGLE_IGNORE_END = 240
+ANGLE_IGNORE_START = 90 + 65
+ANGLE_IGNORE_END = 270 - 65
 
 LIDAR_OFFSET_ANGLE = 180  # lidar is backward
 
@@ -35,7 +35,7 @@ def start_lidar(device):
     pub = rospy.Publisher(LIDAR_NODE, String, queue_size=1)
 
     lidar = RPLidar(device)
-    lidar.set_pwm(MAX_MOTOR_PWM)  # set to full speed
+    # lidar.set_pwm(MAX_MOTOR_PWM)  # set to full speed
 
     while not rospy.is_shutdown():
         for i, scan in enumerate(lidar.iter_scans()):

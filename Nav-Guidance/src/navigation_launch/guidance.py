@@ -22,8 +22,8 @@ GUIDANCE_HZ = 10
 # Drivetrain
 #
 
-DEFAULT_SPEED = 0.5  # forward speed in m/s
-MAX_ROTATION = 90  # max crabbing angle
+DEFAULT_SPEED = .8  # forward speed in m/s
+MAX_ROTATION = 30  # max crabbing angle
 MAX_TRANSLATION = 90  # max crabbing angle
 
 control = None

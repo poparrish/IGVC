@@ -18,9 +18,9 @@ class GripPipelineTest:
         self.blur_0_output = None
 
         self.__hsv_threshold_input = self.blur_0_output
-        self.__hsv_threshold_hue = [0, 180]
-        self.__hsv_threshold_saturation = [0, 20]
-        self.__hsv_threshold_value = [73, 255]
+        self.__hsv_threshold_hue = [39, 64]
+        self.__hsv_threshold_saturation = [55, 255]
+        self.__hsv_threshold_value = [0, 255]
 
         self.hsv_threshold_output = None
 

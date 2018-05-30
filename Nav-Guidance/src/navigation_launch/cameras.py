@@ -34,8 +34,9 @@ CAMERA_NODE = "CAMERA"
 
 def processImage(img, camera_info):
     line_contours = grip.process(img)
-    big_map = np.zeros_like(img)
+    big_map = np.ones_like(img)
     cv2.drawContours(big_map, line_contours, -1, (0, 255, 0), thickness = -1)
+    print(len(big_map), len(big_map[0]))
 
     local_map = camera_info.convertToFlat(big_map)
     low_green = (0,100,0)
@@ -56,9 +57,9 @@ def processImage(img, camera_info):
 
     # line_contours = grip.process(flat_map, hsv_hue_thresh = line_thresh_hue, hsv_sat_thresh = line_thresh_sat,hsv_val_thresh = line_thresh_val)
     # cv2.drawContours(local_map, line_contours, -1, (0, 255, 0), thickness = -1)
-    cv2.imshow('local_map', local_map)
+    # cv2.imshow('local_map', local_map)
     
-    # cv2.imshow('big_map', big_map)
+    cv2.imshow('big_map', big_map)
     # cv2.imshow('flat_map', flat_map)
     return local_map, line_contours
 
