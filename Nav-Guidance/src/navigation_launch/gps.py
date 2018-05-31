@@ -18,6 +18,7 @@ def get_location(mav):
     if pos is not None and raw is not None:
         return {'lat': pos.lat / 10.0 ** 7,
                 'lon': pos.lon / 10.0 ** 7,
+                'satellites': raw.satellites_visible,
                 'heading': pos.hdg / 100.0,
                 'fixed': raw.fix_type >= GPS_FIX_TYPE_3D_FIX}
     return None

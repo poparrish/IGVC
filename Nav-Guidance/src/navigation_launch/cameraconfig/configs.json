@@ -25,5 +25,13 @@
 	"hval_low": 19,  "hval_high": 39,
 	"sval_low": 0,   "sval_high": 56,
 	"vval_low": 138, "vval_high": 255
+},
+"5pm": {
+	"rval_low": 164, "rval_high": 255,
+	"gval_low": 183, "gval_high": 255,
+	"bval_low": 161, "bval_high": 255,
+	"hval_low": 13,  "hval_high": 58,
+	"sval_low": 0,   "sval_high": 106,
+	"vval_low": 158, "vval_high": 255
 }
 }

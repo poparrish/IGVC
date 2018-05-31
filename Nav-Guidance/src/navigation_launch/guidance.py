@@ -53,18 +53,18 @@ def calculate_translation(lidar, camera, goal):
 
 GPS_BUFFER = 20  # buffer GPS messages to help with accuracy
 
-FIRST_WAYPOINT_TOLERANCE = 10  # when to start tracking the first waypoint
+FIRST_WAYPOINT_TOLERANCE = 5  # when to start tracking the first waypoint
 
 WAYPOINT_TOLERANCE = 1  # precision in meters
 WAYPOINT_CONFIDENCE = 0.5  # percent of readings required to be within tolerance
 WAYPOINTS = [
-    # (10, 10),  # bogus waypoint that we'll never get close to (and therefore never trigger waypoint navigation)
-    # (43.600189, -116.196871),  # N/W corner of field
-    # (43.600313, -116.197169),  # S/E corner of field
+        # (10, 10),  # bogus waypoint that we'll never get close to (and therefore never trigger waypoint navigation)
+  # (43.6002469, -116.1971979),
+  # (43.6002433, -116.1970596),
+     (43.600314, -116.197164),  # N/W corner of field
+     (43.600248, -116.196955),  # S/E corner of field
+     (43.600314, -116.197164),  # N/W corner of field
     # (43.600258, -116.196969),  # Middle of field
-    {43.6002692, -116.197187},
-    {43.6002610, -116.197069},
-    {43.6002692, -116.197187}
 ]
 
 
@@ -73,7 +73,8 @@ def reached_waypoint(waypoint, gps_buffer, tolerance=WAYPOINT_TOLERANCE):
     distances = [dist_to_waypoint(loc, waypoint) for loc in gps_buffer]
     state_debug.publish(str(distances))
     within_tolerance = sum(1 for d in distances if d < tolerance)
-    return within_tolerance / float(len(distances)) > WAYPOINT_CONFIDENCE
+    print(avg(distances))
+    return avg(distances) < WAYPOINT_CONFIDENCE
 
 
 #
@@ -120,8 +121,8 @@ def compute_next_state(state, (nav, gps_buffer)):
 
     if state['state'] == WAYPOINT_TRACKING:
         tracking = state['tracking']
-
         # if we've reached the current waypoint, start tracking the next one
+        print('tracking = %s' % tracking)
         if reached_waypoint(tracking, gps_buffer):
 
             # ... unless we are at the last one, in which case we should resume normal navigation
@@ -171,6 +172,7 @@ def compute_next_state2((state, nav, gps_buffer)):
     if state['state'] == WAYPOINT_TRACKING:
         tracking = state['tracking']
 
+        print('tracking = %s' % tracking)
         # if we've reached the current waypoint, start tracking the next one
         if reached_waypoint(tracking, gps_buffer):
 
@@ -220,10 +222,11 @@ def update_control((msg, state)):
     rospy.loginfo('translation = %s, rotation = %s, speed = %s', translation, rotation, state['speed'])
 
     # don't rotate if bender needs to translate away from a line
-    translation_threshhold = 60
-    rotation_throttle = 0
-    if np.absolute(translation) > translation_threshhold:
-        rotation = rotation * rotation_throttle
+    if state['state'] == LINE_FOLLOWING:
+        translation_threshhold = 60
+        rotation_throttle = 0
+        if np.absolute(translation) > translation_threshhold:
+            rotation = rotation * rotation_throttle
 
     update_drivetrain(translation, rotation, state['speed'])
 
