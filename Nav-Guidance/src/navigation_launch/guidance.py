@@ -65,7 +65,7 @@ WAYPOINTS = [
 def reached_waypoint(num, gps_buffer, tolerance):
     waypoint = WAYPOINTS[num]
     distance = avg([dist_to_waypoint(loc, waypoint) for loc in gps_buffer])
-    state_debug.publish(distance)
+    state_debug.publish(str(distance))
     return distance < tolerance
 
 
