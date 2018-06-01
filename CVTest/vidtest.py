@@ -8,7 +8,7 @@ grip = GripPipelineTest()
 images = []
 img = "test"
 camera_info = CameraInfo(36.5, 33, 52, 83, 103)
-cam = cv2.VideoCapture('test.mp4')
+cam = cv2.VideoCapture('1130IGVC.mp4')
 while(cam.isOpened()):
     ret, frame = cam.read()
     for i in xrange(15):

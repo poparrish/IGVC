@@ -63,4 +63,3 @@ def calculate_line_angle(contours):
     return math.degrees(math.atan(slope))
 
 # def calc_crab_away(contours):
-    

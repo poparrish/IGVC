@@ -50,7 +50,7 @@ def calculate_translation(lidar, camera, goal):
 # Waypoints
 #
 
-GPS_BUFFER = 20  # buffer GPS messages to help with accuracy
+GPS_BUFFER = 5  # buffer GPS messages to help with accuracy
 
 FIRST_WAYPOINT_TOLERANCE = 5  # when to start tracking the first waypoint
 WAYPOINT_TOLERANCE = 1  # precision in meters
@@ -66,6 +66,7 @@ def reached_waypoint(num, gps_buffer, tolerance):
     waypoint = WAYPOINTS[num]
     distance = avg([dist_to_waypoint(loc, waypoint) for loc in gps_buffer])
     state_debug.publish(distance)
+    print(distance)
     return distance < tolerance
 
 

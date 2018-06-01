@@ -33,5 +33,22 @@
 	"hval_low": 13,  "hval_high": 58,
 	"sval_low": 0,   "sval_high": 106,
 	"vval_low": 158, "vval_high": 255
+},
+"1030IGVC": {
+	"rval_low": 157, "rval_high": 255,
+	"gval_low": 174, "gval_high": 255,
+	"bval_low": 195, "bval_high": 255,
+	"hval_low": 103,  "hval_high": 183,
+	"sval_low": 0,   "sval_high": 87,
+	"vval_low": 0, "vval_high": 255
+},
+"1130IGVC": {
+	"rval_low": 188, "rval_high": 255,
+	"gval_low": 174, "gval_high": 255,
+	"bval_low": 195, "bval_high": 255,
+	"hval_low": 21,  "hval_high": 125,
+	"sval_low": 0,   "sval_high": 35,
+	"vval_low": 0, "vval_high": 255
 }
+
 }
