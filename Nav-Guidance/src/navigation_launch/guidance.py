@@ -55,18 +55,27 @@ GPS_BUFFER = 5  # buffer GPS messages to help with accuracy
 FIRST_WAYPOINT_TOLERANCE = 5  # when to start tracking the first waypoint
 WAYPOINT_TOLERANCE = 1  # precision in meters
 
-WAYPOINTS = [
-    (43.600314, -116.197164),  # N/W corner of field
-    (43.600248, -116.196955),  # center of field
-    (43.600314, -116.197164),  # N/W corner of field
-]
+#WAYPOINTS = [
+#    (43.600314, -116.197164),  # N/W corner of field
+#    (43.600248, -116.196955),  # center of field
+#    (43.600314, -116.197164),  # N/W corner of field
+#]
 
+WAYPOINTS = [
+    (42.6782191223, -83.1955080989),
+    (42.6778987274, -83.1954820799),
+    (42.6782191223, -83.1955080989)
+]
 
 def reached_waypoint(num, gps_buffer, tolerance):
     waypoint = WAYPOINTS[num]
     distance = avg([dist_to_waypoint(loc, waypoint) for loc in gps_buffer])
+<<<<<<< HEAD
     state_debug.publish(distance)
     print(distance)
+=======
+    state_debug.publish(str(distance))
+>>>>>>> f4756e50a72c3f3151183aa22e54ed4be3c1f1e6
     return distance < tolerance
 
 

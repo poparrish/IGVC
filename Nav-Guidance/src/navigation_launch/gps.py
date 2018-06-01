@@ -9,7 +9,7 @@ from std_msgs.msg import String
 
 GPS_NODE = 'GPS'
 GPS_REFRESH_RATE = 10
-
+GPS_BIAS = 160-90-30#58
 
 def get_location(mav):
     pos = mav.messages.get('GLOBAL_POSITION_INT', None)
@@ -19,7 +19,7 @@ def get_location(mav):
         return {'lat': pos.lat / 10.0 ** 7,
                 'lon': pos.lon / 10.0 ** 7,
                 'satellites': raw.satellites_visible,
-                'heading': pos.hdg / 100.0,
+                'heading': ((pos.hdg / 100.0) + GPS_BIAS) % 360,
                 'fixed': raw.fix_type >= GPS_FIX_TYPE_3D_FIX}
     return None
 
