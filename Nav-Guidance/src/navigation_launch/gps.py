@@ -11,6 +11,7 @@ GPS_NODE = 'GPS'
 GPS_REFRESH_RATE = 10
 GPS_BIAS = 0#160-90-30#58
 
+
 xOffset = 0
 yOffset = 0
 zOffset = 0
@@ -19,9 +20,10 @@ Pitch = 0
 Roll = 0
 Yaw = 0
 
-
+heading = 0
 
 def get_location(mav):
+    global heading
     pos = mav.messages.get('GLOBAL_POSITION_INT', None)
     raw = mav.messages.get('GPS_RAW_INT', None)
 
@@ -29,7 +31,7 @@ def get_location(mav):
         return {'lat': pos.lat / 10.0 ** 7,
                 'lon': pos.lon / 10.0 ** 7,
                 'satellites': raw.satellites_visible,
-                'heading': ((pos.hdg / 100.0) + GPS_BIAS) % 360,
+                'heading': heading,
                 'fixed': raw.fix_type >= GPS_FIX_TYPE_3D_FIX}
     return None
 
@@ -42,13 +44,15 @@ def init_mavlink(device):
 
     return mav
 
-def update_bias(data):
-    GPS_BIAS = data.data
+def new_heading(data):
+    global heading
+    heading = data.data
 
 def start_gps(device):
+    
     pub = rospy.Publisher(GPS_NODE, String, queue_size=GPS_REFRESH_RATE * 10)
     rospy.init_node(GPS_NODE)
-    rospy.Subscriber('GPS_BIAS', Int32, update_bias)
+    rospy.Subscriber('heading', Int32, new_heading)
     mav = init_mavlink(device)
     pevent = mavutil.periodic_event(GPS_REFRESH_RATE)
     while not rospy.is_shutdown():

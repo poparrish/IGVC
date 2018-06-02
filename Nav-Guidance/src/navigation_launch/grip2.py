@@ -18,7 +18,7 @@ class GripPipelineTest:
 	with open (file_name) as configfile:
 	  data = "".join(configfile.readlines()).replace('\n','')
 	
-	chosen_config = "1130IGVC"
+	chosen_config = "HACK"
         data = json.loads(data)
         cd = data[chosen_config]
         self.__blur_0_type = BlurType.Median_Filter

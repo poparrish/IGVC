@@ -128,7 +128,7 @@ def calcWheel(bender_speed,translation_theta,wheelx,wheely,theta_dot,LENGTH,poin
 
     #convert from m/s to rpm & radians to degrees
     wheel_speed = wheel_speed/0.0085922#for no orange tread
-    wheel_theta = wheel_theta*57.2958
+    wheel_theta = wheel_theta*58.2958
     wheelString = str('B'+str(int(wheel_theta))+'S'+str(int(wheel_speed)))
     return wheelString
 

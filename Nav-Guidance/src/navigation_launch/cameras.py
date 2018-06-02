@@ -75,6 +75,8 @@ def cameraProcessor():
         local_map, contours = processImage(img, camera_info)
         # local_map = np.zeros([3,3,3])
         local_map_msg = CameraMsg(local_map_val = local_map, contours = contours, camera_info = camera_info)
+        # local_map_msg = CameraMsg(local_map_val = local_map, contours = [[]], camera_info = camera_info)
+        
         local_map_msg_string = local_map_msg.pickleMe()
         # print(len(local_map_msg_string))
         # rospy.loginfo(local_map_msg_string)

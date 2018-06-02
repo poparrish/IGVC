@@ -62,10 +62,25 @@ def sum_repulsors(vecs, position, cluster_mm, weight):
     clusters = partition(vecs, cluster_mm)
     return sum([calc_repulsive_force(r, position, weight) for r in clusters])
 
+def mask_lidar_in_cam(lidar_vec, cam_vec, tol):
+    to_remove = []
+    for l_v in lidar_vec:
+        for i in xrange(len(cam_vec)):
+            c_v = cam_vec[i]
+            if (c_v.x-tol < l_v.x < c_v.x+tol) and (c_v.x-tol < l_v.x < c_v.x+tol):
+                to_remove.append(i)
+    for ind in sorted(to_remove, reverse = True):
+        del cam_vec[ind]
+    return cam_vec
 
 def calculate_potential(lidar_data, camera_data, goal, position=zero):
     a = calc_attractive_force(goal, position)
     rl = sum_repulsors(lidar_data, position, cluster_mm=150, weight=2)
-    rc = sum_repulsors([v for c in camera_data for v in c], position, cluster_mm=500, weight=2)
+    camera_data = [v for c in camera_data for v in c]
+    bad_hack = False
+    if bad_hack:
+        return a - rl
+
+    rc = sum_repulsors(camera_data, position, cluster_mm=500, weight=2)
 
     return a - rl - rc

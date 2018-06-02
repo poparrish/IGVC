@@ -52,8 +52,8 @@ def calculate_translation(lidar, camera, goal):
 
 GPS_BUFFER = 5  # buffer GPS messages to help with accuracy
 
-FIRST_WAYPOINT_TOLERANCE = 5  # when to start tracking the first waypoint
-WAYPOINT_TOLERANCE = 1  # precision in meters
+FIRST_WAYPOINT_TOLERANCE = 1  # when to start tracking the first waypoint
+WAYPOINT_TOLERANCE = .5  # precision in meters
 
 #WAYPOINTS = [
 #    (43.600314, -116.197164),  # N/W corner of field
@@ -94,16 +94,16 @@ def reached_waypoint(num, gps_buffer, tolerance):
 LINE_FOLLOWING = 'LINE_FOLLOWING'
 WAYPOINT_TRACKING = 'WAYPOINT_TRACKING'
 
-# DEFAULT_STATE = {
-#     'state': LINE_FOLLOWING,
-#     'speed': INITIAL_SPEED,
-#     'tracking': 0
-# }
 DEFAULT_STATE = {
-    'state': WAYPOINT_TRACKING,
+    'state': LINE_FOLLOWING,
     'speed': INITIAL_SPEED,
     'tracking': 0
 }
+# DEFAULT_STATE = {
+#     'state': WAYPOINT_TRACKING,
+#     'speed': INITIAL_SPEED,
+#     'tracking': 0
+# }
 
 debug = None
 state_debug = rospy.Publisher('state', String, queue_size=3)
@@ -177,8 +177,10 @@ def update_control((msg, state)):
 
     else:
         goal = calculate_gps_heading(gps, WAYPOINTS[state['tracking']])  # track the waypoint
+        
         rotation = to180(goal.angle)
         goal = goal.with_angle(0)  # don't need to crab for GPS waypoint, steering will handle that
+        state_debug.publish(str(goal))
 
     # calculate translation based on obstacles
     potential = calculate_potential(lidar, camera, goal)

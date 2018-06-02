@@ -28,6 +28,9 @@ def create_vector((quality, angle, dist)):
 
 
 def convert_scan_to_vectors(scan):
+    dumb_hack = False
+    if dumb_hack:
+        return []
     return [v for v in map(create_vector, scan) if v is not None]
 
 
