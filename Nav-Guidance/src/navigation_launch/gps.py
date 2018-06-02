@@ -5,7 +5,7 @@ import time
 import rospy
 from pymavlink import mavutil, mavextra
 from pymavlink.dialects.v20.common import GPS_FIX_TYPE_3D_FIX
-from std_msgs.msg import String
+from std_msgs.msg import String, Int32
 
 GPS_NODE = 'GPS'
 GPS_REFRESH_RATE = 10
@@ -42,11 +42,13 @@ def init_mavlink(device):
 
     return mav
 
+def update_bias(data):
+    GPS_BIAS = data.data
 
 def start_gps(device):
     pub = rospy.Publisher(GPS_NODE, String, queue_size=GPS_REFRESH_RATE * 10)
     rospy.init_node(GPS_NODE)
-
+    rospy.Subscriber('GPS_BIAS', Int32, update_bias)
     mav = init_mavlink(device)
     pevent = mavutil.periodic_event(GPS_REFRESH_RATE)
     while not rospy.is_shutdown():
