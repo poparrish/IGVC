@@ -61,21 +61,29 @@ WAYPOINT_TOLERANCE = 1  # precision in meters
 #    (43.600314, -116.197164),  # N/W corner of field
 #]
 
+test1stwp = (42.6785268, -83.1953824)
+test2ndwp = (42.6786267, -83.1948953)
+# WAYPOINTS = [
+#     test2ndwp,
+#     test1stwp,
+#     test2ndwp
+# ]
+
+
+
+qual1 = (42.6782191223, -83.1955080989)
+qual2 = (42.6778987274, -83.1954820799)
+
 WAYPOINTS = [
-    (42.6782191223, -83.1955080989),
-    (42.6778987274, -83.1954820799),
-    (42.6782191223, -83.1955080989)
+    qual1,
+    qual2,
+    qual1
 ]
 
 def reached_waypoint(num, gps_buffer, tolerance):
     waypoint = WAYPOINTS[num]
     distance = avg([dist_to_waypoint(loc, waypoint) for loc in gps_buffer])
-<<<<<<< HEAD
-    state_debug.publish(distance)
-    print(distance)
-=======
     state_debug.publish(str(distance))
->>>>>>> f4756e50a72c3f3151183aa22e54ed4be3c1f1e6
     return distance < tolerance
 
 
@@ -86,8 +94,13 @@ def reached_waypoint(num, gps_buffer, tolerance):
 LINE_FOLLOWING = 'LINE_FOLLOWING'
 WAYPOINT_TRACKING = 'WAYPOINT_TRACKING'
 
+# DEFAULT_STATE = {
+#     'state': LINE_FOLLOWING,
+#     'speed': INITIAL_SPEED,
+#     'tracking': 0
+# }
 DEFAULT_STATE = {
-    'state': LINE_FOLLOWING,
+    'state': WAYPOINT_TRACKING,
     'speed': INITIAL_SPEED,
     'tracking': 0
 }

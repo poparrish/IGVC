@@ -3,13 +3,23 @@ import pickle
 import time
 
 import rospy
-from pymavlink import mavutil
+from pymavlink import mavutil, mavextra
 from pymavlink.dialects.v20.common import GPS_FIX_TYPE_3D_FIX
 from std_msgs.msg import String
 
 GPS_NODE = 'GPS'
 GPS_REFRESH_RATE = 10
-GPS_BIAS = 160-90-30#58
+GPS_BIAS = 0#160-90-30#58
+
+xOffset = 0
+yOffset = 0
+zOffset = 0
+
+Pitch = 0
+Roll = 0
+Yaw = 0
+
+
 
 def get_location(mav):
     pos = mav.messages.get('GLOBAL_POSITION_INT', None)
@@ -39,12 +49,12 @@ def start_gps(device):
 
     mav = init_mavlink(device)
     pevent = mavutil.periodic_event(GPS_REFRESH_RATE)
-
     while not rospy.is_shutdown():
         mav.recv_msg()
 
         if pevent.trigger():
             loc = get_location(mav)
+
             if loc is not None:
                 print(loc['lat'], loc['lon'])
                 rospy.loginfo('Publishing gps %s' % loc)

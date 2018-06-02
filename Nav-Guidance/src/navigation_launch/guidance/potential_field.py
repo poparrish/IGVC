@@ -65,7 +65,6 @@ def sum_repulsors(vecs, position, cluster_mm, weight):
 
 def calculate_potential(lidar_data, camera_data, goal, position=zero):
     a = calc_attractive_force(goal, position)
-
     rl = sum_repulsors(lidar_data, position, cluster_mm=150, weight=2)
     rc = sum_repulsors([v for c in camera_data for v in c], position, cluster_mm=500, weight=2)
 
