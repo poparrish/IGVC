@@ -5,6 +5,7 @@ from std_msgs.msg import String
 import cv2
 import numpy as np
 from grip2 import GripPipelineTest
+from remove_orange import RemoveOrange
 from camera_info import CameraInfo
 
 '''
@@ -14,6 +15,7 @@ Configuration stuff
 cam1num = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
 # cam1num = 'linepic1.JPG'
 grip = GripPipelineTest()
+orange = RemoveOrange()
 
 CAMERA_NODE = "CAMERA"
 
@@ -33,6 +35,11 @@ CAMERA_NODE = "CAMERA"
 
 
 def processImage(img, camera_info):
+    # oc = orange.process(img)
+    # for contour in oc:
+    #         x,y,w,h = cv2.boundingRect(contour)
+    #         cv2.rectangle(img, (x,0), (x+w, y+h), (0,0,0), -1)
+
     line_contours = grip.process(img)
     big_map = np.ones_like(img)
     cv2.drawContours(big_map, line_contours, -1, (0, 255, 0), thickness = -1)

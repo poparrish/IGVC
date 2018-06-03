@@ -75,12 +75,20 @@
 	"vval_low": 188, "vval_high": 255
 },
 "HACK": {
-	"rval_low": 133, "rval_high": 255,
+	"rval_low": 120, "rval_high": 255,
+	"gval_low": 156, "gval_high": 255,
+	"bval_low": 177, "bval_high": 242,
+	"hval_low": 104,  "hval_high": 123,
+	"sval_low": 0,   "sval_high": 80,
+	"vval_low": 165, "vval_high": 255
+},
+"OC": {
+	"rval_low": 138, "rval_high": 255,
 	"gval_low": 149, "gval_high": 255,
-	"bval_low": 144, "bval_high": 242,
-	"hval_low": 180,  "hval_high": 180,
+	"bval_low": 126, "bval_high": 255,
+	"hval_low": 47,  "hval_high": 111,
 	"sval_low": 0,   "sval_high": 255,
-	"vval_low": 129, "vval_high": 190
+	"vval_low": 170, "vval_high": 255
 }
 
 }
