@@ -23,8 +23,13 @@ def msg_received(msg):
 
 
 def plot_vectors(vecs, size=None, color=None):
-    plt.scatter(x=[v.x for v in vecs],
-                y=[v.y for v in vecs],
+    xs = [v.x for v in vecs]
+    ys = [v.y for v in vecs]
+
+    xsf = ys
+    ysf = ys
+    plt.scatter(x= xs,
+                y= ys,
                 s=size,
                 c=color)
 

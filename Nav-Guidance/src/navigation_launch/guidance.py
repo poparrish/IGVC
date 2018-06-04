@@ -71,19 +71,39 @@ test2ndwp = (42.6786267, -83.1948953)
 
 
 
+endof = (42.678363, -83.1945975)
 qual1 = (42.6782191223, -83.1955080989)
 qual2 = (42.6778987274, -83.1954820799)
 
+rolling_average = []
+
 WAYPOINTS = [
+endof,
     qual1,
     qual2,
     qual1
 ]
 
+
+northwp = [42.6790984, -83.1949250546]
+midwp = [42.6789603912, -83.1951132036]
+southwp = [42.6788026, -83.1949093082]
+WAYPOINTS = [
+    northwp,
+    midwp,
+    southwp
+]
+
+# WAYPOINTS = [
+#     southwp,
+#     midwp,
+#     northwp
+# ]
+
 def reached_waypoint(num, gps_buffer, tolerance):
     waypoint = WAYPOINTS[num]
     distance = avg([dist_to_waypoint(loc, waypoint) for loc in gps_buffer])
-    state_debug.publish(str(distance))
+    # state_debug.publish(str(distance))
     return distance < tolerance
 
 
@@ -164,6 +184,9 @@ def update_control((msg, state)):
     """figures out what we need to do based on the current state and map"""
     camera = msg['camera']
     lidar = msg['lidar']
+    # for v in lidar:
+    #     if v.angle > 345 or v.angle < 15:
+    #         print(v)
     gps = msg['gps']
 
     # calculate theta_dot based on the current state
@@ -180,7 +203,7 @@ def update_control((msg, state)):
         
         rotation = to180(goal.angle)
         goal = goal.with_angle(0)  # don't need to crab for GPS waypoint, steering will handle that
-        state_debug.publish(str(goal))
+        # state_debug.publish(str(goal))
 
     # calculate translation based on obstacles
     potential = calculate_potential(lidar, camera, goal)
@@ -194,18 +217,18 @@ def update_control((msg, state)):
         rotation_throttle = 0
         if np.absolute(translation) > translation_threshhold:
             rotation = rotation * rotation_throttle
-
+    rolling_average.append((translation, rotation, state['state']))
     update_drivetrain(translation, rotation, state['speed'])
 
-    debug.publish(pickle.dumps({
-        'camera': camera,
-        'lidar': lidar,
-        'gps': gps,
-        'state': state,
-        'goal': goal,
-        'translation': translation,
-        'rotation': rotation
-    }))
+    # debug.publish(pickle.dumps({
+    #     'camera': camera,
+    #     'lidar': lidar,
+    #     'gps': gps,
+    #     'state': state,
+    #     'goal': goal,
+    #     'translation': translation,
+    #     'rotation': rotation
+    # }))
 
 
 def main():
@@ -230,8 +253,11 @@ def main():
     # update controls whenever nav or state emits
     Observable.combine_latest(nav, state, lambda n, g: (n, g)) \
         .subscribe(update_control)
+    rate = rospy.Rate(10) # 10hz
+    while not rospy.is_shutdown():
 
-    rospy.spin()
+        rate.sleep()
+    # rospy.spin()
 
 
 if __name__ == '__main__':
