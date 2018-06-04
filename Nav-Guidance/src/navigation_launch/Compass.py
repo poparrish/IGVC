@@ -11,7 +11,7 @@ import sched, time
 from std_msgs.msg import Int32
 
 COMPASS_NODE = 'COMPASS_NODE'
-ser = serial.Serial('/dev/ttyACM0', 115200)
+ser = serial.Serial('/dev/ttyACM4', 115200)
 
 HEADING_BIAS = 0
 

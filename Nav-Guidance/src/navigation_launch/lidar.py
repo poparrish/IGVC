@@ -28,11 +28,12 @@ def create_vector((quality, angle, dist)):
 
 
 def convert_scan_to_vectors(scan):
-    dumb_hack = False
-    if dumb_hack:
-        return []
-    return [v for v in map(create_vector, scan) if v is not None]
-
+    to_return = [v for v in map(create_vector, scan) if v is not None]
+    for v in to_return:
+        angle = v.angle
+        if angle > 345 or angle < 15:
+            print v
+    return to_return
 
 def start_lidar(device):
     rospy.init_node(LIDAR_NODE)
