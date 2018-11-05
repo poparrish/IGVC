@@ -41,10 +41,10 @@ int dirPinWheel3 = 19;
 
 int safetyLight = 39;
 
-int power0 = 20;
-int power1 = 21;
-int power2 = 22;
-int power3 = 23;
+int power0 = 20;  //hub transistor on/off control
+int power1 = 21;  //hub transistor on/off control
+int power2 = 22;  //hub transistor on/off control
+int power3 = 23;  //hub transistor on/off control
 
 int limit0 = 25;
 int limit1 = 24;
