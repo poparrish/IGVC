@@ -14,6 +14,10 @@ import sys, os
 from guidance import contours_to_vectors
 import numpy as np
 import matplotlib.pyplot as plt
+from operator import itemgetter
+import itertools
+
+
 
 cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
 CAMERA_NODE = "CAMERA"
@@ -28,8 +32,8 @@ def process_image(img, camera_info):
     medianRadius = cv2.getTrackbarPos('medianRadius', 'img_medianBlur')
     img_medianBlur = blur(src = img,type = BlurType.Median_Filter, radius = medianRadius)
     cv2.namedWindow('img_medianBlur',0)
-    cv2.resizeWindow('img_medianBlur', 620, 480)
-    cv2.imshow('img_medianBlur',img_medianBlur)
+    #cv2.resizeWindow('img_medianBlur', 640, 480)
+    #cv2.imshow('img_medianBlur',img_medianBlur)
 
 
     #HSV filter
@@ -48,7 +52,7 @@ def process_image(img, camera_info):
     #gaussian blur
     gaussianRadius = cv2.getTrackbarPos('gaussianRadius', 'img_gaussianBlur')
     img_gaussianBlur = blur(src=img_HSV,type=BlurType.Gaussian_Blur,radius=gaussianRadius)
-    cv2.imshow('img_gaussianBlur',img_gaussianBlur)
+    #cv2.imshow('img_gaussianBlur',img_gaussianBlur)
 
     #find contours
     contoursMinArea = cv2.getTrackbarPos('contoursMinArea', 'img_displayFilteredContours')
@@ -67,7 +71,7 @@ def process_image(img, camera_info):
     img_rawContours = find_contours(input=img_gaussianBlur,external_only=False)
     img_displayRawContours=np.ones_like(img)#Return an array of ones with the same shape and type as a given array.
     cv2.drawContours(img_displayRawContours, img_rawContours, -1, (255, 255, 255), thickness=1) #-1 thickness makes them solid
-    cv2.imshow('img_displayRawContours',img_displayRawContours)
+    #cv2.imshow('img_displayRawContours',img_displayRawContours)
 
     #filter contours
     img_filteredContours = filter_contours(input_contours=img_rawContours,min_area=contoursMinArea,min_perimeter=contoursMinPerimeter,
@@ -76,30 +80,33 @@ def process_image(img, camera_info):
                                            max_vertex_count=contoursMaxVertices,min_vertex_count=contoursMinVertices,min_ratio=contoursMinRatio,
                                            max_ratio=contoursMaxRatio)
     img_displayFilteredContours = np.ones_like(img)  # Return an array of ones with the same shape and type as a given array.
-    cv2.drawContours(img_displayFilteredContours, img_filteredContours, -1, (0, 255, 255), thickness=-1)
-    cv2.imshow('img_displayFilteredContours', img_displayFilteredContours)
+    cv2.drawContours(img_displayFilteredContours, img_filteredContours, -1, (0, 255, 0), thickness=-1)
+    #cv2.imshow('img_displayFilteredContours', img_displayFilteredContours)
 
     #birds eye view
-    birdsEye=camera_info.convertToFlat(img_displayFilteredContours)
-    cv2.imshow("birdsEye",birdsEye)
+    img_displayBirdsEye=camera_info.convertToFlat(img_displayFilteredContours)
+    cv2.imshow("birdsEye",img_displayBirdsEye)
 
     #relic of searching traversable space?
-    # low_green = (0, 100, 0)
-    # high_green = (0, 255, 0)
-    # contour_highlight = cv2.inRange(birdsEye, low_green,  high_green)
-    # cv2.imshow("contour_highlight",contour_highlight)
-    # external_only = False
+    low_green = (0, 240, 0)
+    high_green = (255, 255, 255)
+    contour_highlight = cv2.inRange(img_displayBirdsEye, low_green,  high_green)
+    #cv2.imshow("contour_highlight",contour_highlight)
+    img_birdsEye = find_contours(input=contour_highlight,external_only=False)
+    img_filteredBirdsEye = filter_contours(input_contours=img_birdsEye,min_area=contoursMinArea,min_perimeter=contoursMinPerimeter,
+                                           min_width=contoursMinWidth,max_width=contoursMaxWidth,min_height=contoursMinHeight,
+                                           max_height=contoursMaxHeight,solidity=[contoursSolidityMin,contoursSolidityMax],
+                                           max_vertex_count=contoursMaxVertices,min_vertex_count=contoursMinVertices,min_ratio=contoursMinRatio,
+                                           max_ratio=contoursMaxRatio)
     # if (external_only):
     #     mode = cv2.RETR_EXTERNAL
     # else:
     #     mode = cv2.RETR_LIST
     # method = cv2.CHAIN_APPROX_SIMPLE
-    # im2, img_displayFilteredContours, hierarchy = cv2.findContours(contour_highlight,mode=mode,method=method)
-    #
+    # im2, img_birdsEye, hierarchy = cv2.findContours(contour_highlight,mode=mode,method=method)
 
-    #pickleit
 
-    return birdsEye, img_filteredContours
+    return img_displayBirdsEye, img_filteredContours,img_filteredBirdsEye
 def filter_contours(input_contours, min_area, min_perimeter, min_width, max_width,min_height, max_height, solidity, max_vertex_count, min_vertex_count,min_ratio, max_ratio):
     output = []
     for contour in input_contours:
@@ -130,7 +137,7 @@ def find_contours(input,external_only):
         mode = cv2.RETR_EXTERNAL
     else:
         mode = cv2.RETR_LIST
-    method = cv2.CHAIN_APPROX_SIMPLE
+    method = cv2.CHAIN_APPROX_NONE
     im2, contours, hierarchy = cv2.findContours(input, mode=mode, method=method)
     return contours
 
@@ -151,6 +158,13 @@ def blur(src, type, radius):
     else:
         return cv2.bilateralFilter(src, -1, round(radius), round(radius))
 
+
+# def grouper(n, iterable, fillvalue=None):
+#     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
+#     args = [iter(iterable)] * n
+#     return itertools.izip_longest(fillvalue=fillvalue, *args)
+
+
 def camera_processor():
     # open a video capture feed
     cam = cv2.VideoCapture(cam_name)
@@ -158,18 +172,27 @@ def camera_processor():
     #init ros stuff
     pub = rospy.Publisher(CAMERA_NODE, String, queue_size=10)
     rospy.init_node(CAMERA_NODE)
-    rate = rospy.Rate(20)
+    rate = rospy.Rate(10)
 
     #configure camera
     camera_info = CameraInfo(36.5, 33, 52, 83, 103)
     while not rospy.is_shutdown():
         #grab a frame
+        #video
         ret_val, img = cam.read()
-        #img = cv2.imread('test_im1.jpg')
-        #look for our lines and convert them to a birds-eye-view with local_map see camera_msg.py
-        local_map, contours = process_image(img, camera_info)
+        #test imgs
+        # img = cv2.imread('test_im1.jpg')
+        # width =640
+        # height = 480
+        # dim = (width,height)
+        # img=cv2.resize(img,dim,interpolation=cv2.INTER_AREA)
 
-        local_map_msg = CameraMsg(local_map_val=local_map, contours=contours, camera_info=camera_info)
+
+        #look for our lines and convert them to a birds-eye-view with local_map see camera_msg.py
+        img_displayBirdsEye, contours,img_birdContours = process_image(img, camera_info)
+        #find contours for birds eye map
+
+        local_map_msg = CameraMsg(local_map_val=img_birdContours, contours=contours, camera_info=camera_info)
 
         local_map_msg_string = local_map_msg.pickleMe()
         # print(len(local_map_msg_string))
@@ -177,26 +200,121 @@ def camera_processor():
         # print(type(local_map_msg_string))
 
         #temp
-        plt.axis([0,3000,0,3000])
-        count = 0
-        try:
-            contour_vectors= contours_to_vectors(contours)
-            print "contour_vectors: ",contour_vectors
 
-            for i in contour_vectors:
-                count+=1
-            print "count: ",count
-        except Exception as e:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
+        # for target in img_birdContours:
+        # #target = max(contours, key=lambda x: cv2.contourArea(x))
+        #     cv2.drawContours(img_displayBirdsEye, [target], -1, [0, 0, 255], -1)  # debug
+        #
+        #     # #since contours are not in order we need to order them. Y coord pair closest to bender chassis as the first
+        #     print "target",target
+        #     line = []
+        #     for i in range(0,len(target[:][:])):
+        #         if target[i][0][1] !=0:#leave out flat areas
+        #             line.append([target[i][0][0],target[i][0][1]])
+        #     print "line: ",line
+        #     sorted_contour = np.array(sorted(line,key = itemgetter(1)))
+        #     print "sorted",sorted_contour
+        #     print "contour_length: ",len(sorted_contour)
+        #     print "next_contour: ", sorted_contour[0]
+        #
+        #
+        #
+        #     # grouped = list(grouper(10,sorted_contour))
+        #     # print "grouped: ",grouped[0]
+        #
+        #
+        #     windowSize=4
+        #     windowCount =0
+        #     averagedContours = []
+        #     numWindows=int(math.floor(len(sorted_contour)/windowSize))
+        #     contourCount = 0
+        #     for window in range(0,numWindows):
+        #         print"windowSize: ",windowSize
+        #         print"numWindows: ",numWindows
+        #         #print "whileCOndition: ",windowSize%sorted_contour[contourCount][1]
+        #         to_average = []
+        #         firstPass = True
+        #         try:
+        #             while sorted_contour[contourCount][1]%windowSize !=0 or firstPass:#working our way through the next window
+        #                 print"enteredLoop"
+        #                 print"contourCount: ",contourCount
+        #                 print"windowCount: ",windowCount
+        #                 to_average.append(sorted_contour[contourCount][0])
+        #                 contourCount +=1
+        #                 print "To_average: ",to_average
+        #                 print "InnerLenToAverage: ",len(to_average)
+        #                 firstPass = False
+        #             # print "while logic: ",sorted_contour[contourCount][1] % windowSize
+        #             newAverage = int(math.floor(sum(to_average) / len(to_average)))
+        #             averagedContours.append([newAverage, windowSize * windowCount / 2])
+        #             print"averagedContours: ", averagedContours
+        #             windowCount += 1
+        #         except:
+        #             pass
+        #
+        #
+        #     print "Averaged_Contours: ",averagedContours
+        #     averagedContours=np.array(averagedContours)
+        #
+        #     # just example of fitting
+        #     xs = sorted_contour[:,0].flatten(order = 'C')
+        #     # print"flatenedXlength: ",len(x)
+        #     # print "x: ",x
+        #     ys = sorted_contour[:,1].flatten(order = 'C')
+        #     # print"flatenedYlength: ",len(y)
+        #     # print "y: ",y
+        #     #print "FlattenedX: ",x
+        #
+        #     #rebuild list
+        #     # fX = []
+        #     # fY = []
+        #     # for i in range(0,len(x)):
+        #     #     if y[i]!=134 and y[i]!=0 and x[i]!=134 and x[i]!=0:
+        #     #         fX.append(x[i])
+        #     #         fY.append(y[i])
+        #     #         line.append([x[i],y[i]])
+        #     # print "filteredLengthx: ",len(fX)
+        #     # print "filteredLengthy: ",len(fY)
+        #     # sX = []
+        #     # sY = []
+        #     # sorted_contour = sorted(line, key=itemgetter(1))
+        #     # print "sorted contour: ",sorted_contour
+        #     # for i in range(0,len(sorted_contour)):
+        #     #     sX.append(sorted_contour[i][0])
+        #     #     sY.append(sorted_contour[i][1])
+        #
+        #     #betterPlot windowTest?
+        #     windowContour=np.array([[188, 0], [201, 10], [194, 20], [200, 30], [190, 40], [198, 50], [195, 60], [197, 70], [195, 80], [196, 90],
+        #      [189, 100], [189, 110], [186, 120]])
+        #
+        #
+        #     x = averagedContours[:, 0].flatten(order='C')
+        #     # print"flatenedXlength: ",len(x)
+        #     # print "x: ",x
+        #     y = averagedContours[:, 1].flatten(order='C')
+        #
+        #
+        #     m,b = np.poly1d(np.polyfit(x, y, 1))
+        #     ms,bs = np.poly1d(np.polyfit(xs,ys,1))
+        #     #print "poly: ",poly
+        #     plt.axis([0, 300, 0, 250])
+        #     plt.plot([x], [y], 'ro')
+        #     plt.plot([xs],[ys],'bo')
+        #     for i in range(min(xs),max(xs)):
+        #         plt.plot(i,b+m*i,'go')
+        #     for i in range(min(xs),max(xs)):
+        #         plt.plot(i,bs+ms*i,'yo')
+        #     plt.show()
+        #
+        # cv2.imshow('result',img_displayBirdsEye)
 
         pub.publish(local_map_msg_string)
         if cv2.waitKey(1) == 27:
             break
-        rate.sleep()
-
+    rate.sleep()
     cv2.destroyAllWindows()
+
+
 
 
 if __name__ == '__main__':
@@ -211,12 +329,27 @@ if __name__ == '__main__':
 
     # HSV
     cv2.namedWindow('img_HSV')
+    # ilowH = 0
+    # ihighH = 146
+    # ilowS = 0
+    # ihighS = 43
+    # ilowV = 165
+    # ihighV = 243
+
+    # ilowH = 90
+    # ihighH = 133
+    # ilowS = 0
+    # ihighS = 83
+    # ilowV = 149
+    # ihighV = 233
+
     ilowH = 0
-    ihighH = 74
-    ilowS = 48
-    ihighS = 112
-    ilowV = 241
+    ihighH = 72
+    ilowS = 33
+    ihighS = 159
+    ilowV = 209
     ihighV = 255
+
     cv2.createTrackbar('lowH', 'img_HSV', ilowH, 255, callback)
     cv2.createTrackbar('highH', 'img_HSV', ihighH, 255, callback)
     cv2.createTrackbar('lowS', 'img_HSV', ilowS, 255, callback)
@@ -231,8 +364,8 @@ if __name__ == '__main__':
 
     # filter contours
     cv2.namedWindow('img_displayFilteredContours')
-    contoursMinArea = 1500
-    contoursMinPerimeter = 0
+    contoursMinArea = 0
+    contoursMinPerimeter = 318
     contoursMinWidth = 0
     contoursMaxWidth = 1000000
     contoursMinHeight = 0
