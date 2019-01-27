@@ -20,6 +20,7 @@ import itertools
 
 
 cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
+#cam_name = 2
 CAMERA_NODE = "CAMERA"
 
 
@@ -32,8 +33,8 @@ def process_image(img, camera_info):
     medianRadius = cv2.getTrackbarPos('medianRadius', 'img_medianBlur')
     img_medianBlur = blur(src = img,type = BlurType.Median_Filter, radius = medianRadius)
     cv2.namedWindow('img_medianBlur',0)
-    #cv2.resizeWindow('img_medianBlur', 640, 480)
-    #cv2.imshow('img_medianBlur',img_medianBlur)
+    cv2.resizeWindow('img_medianBlur', 640, 480)
+    cv2.imshow('img_medianBlur',img_medianBlur)
 
 
     #HSV filter
@@ -52,7 +53,11 @@ def process_image(img, camera_info):
     #gaussian blur
     gaussianRadius = cv2.getTrackbarPos('gaussianRadius', 'img_gaussianBlur')
     img_gaussianBlur = blur(src=img_HSV,type=BlurType.Gaussian_Blur,radius=gaussianRadius)
-    #cv2.imshow('img_gaussianBlur',img_gaussianBlur)
+    cv2.imshow('img_gaussianBlur',img_gaussianBlur)
+
+    #birds eye view
+    img_displayBirdsEye = camera_info.convertToFlat(img_gaussianBlur)
+    cv2.imshow("birdsEye", img_displayBirdsEye)
 
     #find contours
     contoursMinArea = cv2.getTrackbarPos('contoursMinArea', 'img_displayFilteredContours')
@@ -68,10 +73,10 @@ def process_image(img, camera_info):
     contoursMinVertices = cv2.getTrackbarPos('contoursMinVertices', 'img_displayFilteredContours')
     contoursMinRatio = cv2.getTrackbarPos('contoursMinRatio', 'img_displayFilteredContours')
     contoursMaxRatio = cv2.getTrackbarPos('contoursMaxRatio', 'img_displayFilteredContours')
-    img_rawContours = find_contours(input=img_gaussianBlur,external_only=False)
-    img_displayRawContours=np.ones_like(img)#Return an array of ones with the same shape and type as a given array.
+    img_rawContours = find_contours(input=img_displayBirdsEye,external_only=False)
+    img_displayRawContours=np.ones_like(img_displayBirdsEye)#Return an array of ones with the same shape and type as a given array.
     cv2.drawContours(img_displayRawContours, img_rawContours, -1, (255, 255, 255), thickness=1) #-1 thickness makes them solid
-    #cv2.imshow('img_displayRawContours',img_displayRawContours)
+    cv2.imshow('img_displayRawContours',img_displayRawContours)
 
     #filter contours
     img_filteredContours = filter_contours(input_contours=img_rawContours,min_area=contoursMinArea,min_perimeter=contoursMinPerimeter,
@@ -80,33 +85,11 @@ def process_image(img, camera_info):
                                            max_vertex_count=contoursMaxVertices,min_vertex_count=contoursMinVertices,min_ratio=contoursMinRatio,
                                            max_ratio=contoursMaxRatio)
     img_displayFilteredContours = np.ones_like(img)  # Return an array of ones with the same shape and type as a given array.
-    cv2.drawContours(img_displayFilteredContours, img_filteredContours, -1, (0, 255, 0), thickness=-1)
-    #cv2.imshow('img_displayFilteredContours', img_displayFilteredContours)
+    cv2.drawContours(img_displayFilteredContours, img_filteredContours, -1, (255, 255, 255), thickness=-1)
+    cv2.imshow('img_displayFilteredContours', img_displayFilteredContours)
 
-    #birds eye view
-    img_displayBirdsEye=camera_info.convertToFlat(img_displayFilteredContours)
-    cv2.imshow("birdsEye",img_displayBirdsEye)
+    return img_displayBirdsEye, img_filteredContours
 
-    #relic of searching traversable space?
-    low_green = (0, 240, 0)
-    high_green = (255, 255, 255)
-    contour_highlight = cv2.inRange(img_displayBirdsEye, low_green,  high_green)
-    #cv2.imshow("contour_highlight",contour_highlight)
-    img_birdsEye = find_contours(input=contour_highlight,external_only=False)
-    img_filteredBirdsEye = filter_contours(input_contours=img_birdsEye,min_area=contoursMinArea,min_perimeter=contoursMinPerimeter,
-                                           min_width=contoursMinWidth,max_width=contoursMaxWidth,min_height=contoursMinHeight,
-                                           max_height=contoursMaxHeight,solidity=[contoursSolidityMin,contoursSolidityMax],
-                                           max_vertex_count=contoursMaxVertices,min_vertex_count=contoursMinVertices,min_ratio=contoursMinRatio,
-                                           max_ratio=contoursMaxRatio)
-    # if (external_only):
-    #     mode = cv2.RETR_EXTERNAL
-    # else:
-    #     mode = cv2.RETR_LIST
-    # method = cv2.CHAIN_APPROX_SIMPLE
-    # im2, img_birdsEye, hierarchy = cv2.findContours(contour_highlight,mode=mode,method=method)
-
-
-    return img_displayBirdsEye, img_filteredContours,img_filteredBirdsEye
 def filter_contours(input_contours, min_area, min_perimeter, min_width, max_width,min_height, max_height, solidity, max_vertex_count, min_vertex_count,min_ratio, max_ratio):
     output = []
     for contour in input_contours:
@@ -159,49 +142,49 @@ def blur(src, type, radius):
         return cv2.bilateralFilter(src, -1, round(radius), round(radius))
 
 
-# def grouper(n, iterable, fillvalue=None):
-#     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
-#     args = [iter(iterable)] * n
-#     return itertools.izip_longest(fillvalue=fillvalue, *args)
-
-
 def camera_processor():
     # open a video capture feed
     cam = cv2.VideoCapture(cam_name)
 
-    #init ros stuff
+    #init ros & camera stuff
     pub = rospy.Publisher(CAMERA_NODE, String, queue_size=10)
     rospy.init_node(CAMERA_NODE)
     rate = rospy.Rate(10)
-
-    #configure camera
-    camera_info = CameraInfo(36.5, 33, 52, 83, 103)
+    croppedWidth=640
+    croppedHeight=360
+    rawWidth = 640
+    rawHeight = 480
+    #camera_info = CameraInfo(53,38,76,91,134)#ground level#half (134 inches out)
+    camera_info = CameraInfo(53,40,76,180,217,croppedWidth,croppedHeight)#ground level# 3/4 out
     while not rospy.is_shutdown():
         #grab a frame
-        #video
         ret_val, img = cam.read()
-        #test imgs
-        # img = cv2.imread('test_im1.jpg')
-        # width =640
-        # height = 480
-        # dim = (width,height)
-        # img=cv2.resize(img,dim,interpolation=cv2.INTER_AREA)
 
+        #for debugging
+        cv2.line(img,(640/2,0),(640/2,480),color=(255,0,0),thickness=2)
+        cv2.line(img,(0,int(480*.25)),(640,int(480*.25)),color=(255,0,0),thickness=2)
 
-        #look for our lines and convert them to a birds-eye-view with local_map see camera_msg.py
-        img_displayBirdsEye, contours,img_birdContours = process_image(img, camera_info)
-        #find contours for birds eye map
+        #crop down to speed processing time
+        #img = cv2.imread('test_im2.jpg')
+        dim = (rawWidth,rawHeight)
+        img=cv2.resize(img,dim,interpolation=cv2.INTER_AREA)
+        cropRatio = float(croppedHeight)/float(rawHeight)
+        crop_img = img[int(rawHeight * float(1-cropRatio)):rawHeight, 0:rawWidth]  # crops off the top 25% of the image
+        cv2.imshow("cropped", crop_img)
 
-        local_map_msg = CameraMsg(local_map_val=img_birdContours, contours=contours, camera_info=camera_info)
+        #process the cropped image. returns a "birds eye" of the contours & binary image
+        img_displayBirdsEye, contours = process_image(crop_img, camera_info)
 
+        #build the camera message with the contours and binary image
+        local_map_msg = CameraMsg(local_map_val=img_displayBirdsEye, contours=contours, camera_info=camera_info)
+
+        #make bytestream and pass if off to ros
         local_map_msg_string = local_map_msg.pickleMe()
-        # print(len(local_map_msg_string))
-        # rospy.loginfo(local_map_msg_string)
-        # print(type(local_map_msg_string))
+        rospy.loginfo(local_map_msg_string)
 
         #temp
 
-        # for target in img_birdContours:
+        # for target in contours:
         # #target = max(contours, key=lambda x: cv2.contourArea(x))
         #     cv2.drawContours(img_displayBirdsEye, [target], -1, [0, 0, 255], -1)  # debug
         #
@@ -295,27 +278,23 @@ def camera_processor():
         #
         #
         #     m,b = np.poly1d(np.polyfit(x, y, 1))
-        #     ms,bs = np.poly1d(np.polyfit(xs,ys,1))
+        #     ms,bs = np.poly1d(np.polyfit(xs,ys,2))
         #     #print "poly: ",poly
-        #     plt.axis([0, 300, 0, 250])
-        #     plt.plot([x], [y], 'ro')
+        #     plt.axis([0, 640, 360, 0])
+        #     # plt.plot([x], [y], 'ro')
         #     plt.plot([xs],[ys],'bo')
-        #     for i in range(min(xs),max(xs)):
-        #         plt.plot(i,b+m*i,'go')
+        #     # for i in range(min(x),max(x)):
+        #     #     plt.plot(i,b+m*i,'go')
         #     for i in range(min(xs),max(xs)):
         #         plt.plot(i,bs+ms*i,'yo')
         #     plt.show()
-        #
         # cv2.imshow('result',img_displayBirdsEye)
 
         pub.publish(local_map_msg_string)
         if cv2.waitKey(1) == 27:
             break
-    rate.sleep()
+        rate.sleep()
     cv2.destroyAllWindows()
-
-
-
 
 if __name__ == '__main__':
 
@@ -324,31 +303,39 @@ if __name__ == '__main__':
 
     # Median blur
     cv2.namedWindow('img_medianBlur')
-    medianRadius = 5
+    medianRadius = 7
     cv2.createTrackbar('medianRadius', 'img_medianBlur', medianRadius, 20, callback)
 
     # HSV
     cv2.namedWindow('img_HSV')
-    # ilowH = 0
-    # ihighH = 146
-    # ilowS = 0
-    # ihighS = 43
-    # ilowV = 165
-    # ihighV = 243
-
-    # ilowH = 90
-    # ihighH = 133
-    # ilowS = 0
-    # ihighS = 83
-    # ilowV = 149
-    # ihighV = 233
-
     ilowH = 0
-    ihighH = 72
-    ilowS = 33
-    ihighS = 159
-    ilowV = 209
-    ihighV = 255
+    ihighH = 60
+    ilowS = 41
+    ihighS = 64
+    ilowV = 0
+    ihighV = 210
+
+    ilowH = 90
+    ihighH = 133
+    ilowS = 0
+    ihighS = 83
+    ilowV = 149
+    ihighV = 233
+
+    # ilowH = 44
+    # ihighH = 62
+    # ilowS = 24
+    # ihighS = 119
+    # ilowV = 158
+    # ihighV = 252
+
+    # ilowH = 85
+    # ihighH = 118
+    # ilowS = 24
+    # ihighS = 81
+    # ilowV = 122
+    # ihighV = 255
+
 
     cv2.createTrackbar('lowH', 'img_HSV', ilowH, 255, callback)
     cv2.createTrackbar('highH', 'img_HSV', ihighH, 255, callback)
@@ -359,13 +346,13 @@ if __name__ == '__main__':
 
     # Gaussian Blur
     cv2.namedWindow('img_gaussianBlur')
-    gaussianRadius = 4
+    gaussianRadius = 1
     cv2.createTrackbar('gaussianRadius','img_gaussianBlur',gaussianRadius, 20,callback)
 
     # filter contours
     cv2.namedWindow('img_displayFilteredContours')
-    contoursMinArea = 0
-    contoursMinPerimeter = 318
+    contoursMinArea = 700
+    contoursMinPerimeter = 1
     contoursMinWidth = 0
     contoursMaxWidth = 1000000
     contoursMinHeight = 0
@@ -376,7 +363,7 @@ if __name__ == '__main__':
     contoursMaxVertices = 1000000
     contoursMinVertices = 0
     contoursMinRatio = 0
-    contoursMaxRatio = 1000
+    contoursMaxRatio = 10000
 
     cv2.createTrackbar('contoursMinArea','img_displayFilteredContours',contoursMinArea,50000, callback)
     cv2.createTrackbar('contoursMinPerimeter','img_displayFilteredContours',contoursMinPerimeter,2000, callback)
