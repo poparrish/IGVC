@@ -1,29 +1,36 @@
-<launch><!--
-    <node name="cameras" pkg="navigation_launch" type="cameras.py" />
-    <node name="gps" pkg="navigation_launch" type="gps.py" />
-    <node name="guidance" pkg="navigation_launch" type="guidance.py" />
-    <node name="nav" pkg="navigation_launch" type="nav.py" />
-    <node name="Control_Node" pkg="navigation_launch" type="Control_Node.py" />
--->
+<launch>
+    <!--<node name="cameras" pkg="navigation_launch" type="cameras.py" />-->
+    <!--<node name="gps" pkg="navigation_launch" type="gps.py" />-->
+    <!--<node name="guidance" pkg="navigation_launch" type="guidance.py" />-->
+    <!--<node name="nav" pkg="navigation_launch" type="nav.py" />-->
+    <!--<node name="Control_Node" pkg="navigation_launch" type="Control_Node.py" />-->
 
+<!--
     <node pkg="rplidar_ros" type="rplidarNode" name="rplidar">
         <param name="serial_port" value="/dev/lidar"/>
         <param name="angle_compensate" type="bool" value="true"/>
         <param name="frame_id" value="laser_frame"/>
         <param name="inverted" type="bool" value="true"/>
     </node>
+-->
 
-    <!--<node name="odometry" pkg="navigation_launch" type="odometry.py"/>-->
+    <node name="lidar" pkg="navigation_launch" type="lidar.py" output="screen" />
+    <node name="mapping" pkg="navigation_launch" type="mapping.py" output="screen" />
+    <node name="mapping_debug" pkg="navigation_launch" type="mapping_debug.py" output="screen" />
 
+<!--
     <node pkg="tf" type="static_transform_publisher" name="laser_broadcaster"
           args="0 0 0 3.14 0 0 base_link laser_frame 100" output="screen"/>
+-->
 
-    <node pkg="rviz" type="rviz" name="rviz"/>
+    <!--<node pkg="rviz" type="rviz" name="rviz"/>-->
 
+<!--
     <node pkg="gmapping" type="slam_gmapping" name="gmapping" output="screen">
         <param name="base_frame" value="base_link"/>
         <param name="odom_frame" value="odom"/>
         <param name="delta" value="0.1"/>
     </node>
+-->
 </launch>
 

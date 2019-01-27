@@ -1,0 +1,3 @@
+MAP_TOPIC = 'map'
+LIDAR_TOPIC = 'scans'
+ODOMETRY_TOPIC = 'ODOMETRY'
