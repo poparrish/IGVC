@@ -394,12 +394,12 @@ if __name__ == '__main__':
     ilowV = 0
     ihighV = 210
 
-    ilowH = 9
+    ilowH = 49
     ihighH = 64
     ilowS = 43
     ihighS = 206
     ilowV = 147
-    ihighV = 235
+    ihighV = 255
 
     # ilowH = 44
     # ihighH = 62
@@ -430,7 +430,7 @@ if __name__ == '__main__':
 
     # filter contours
     cv2.namedWindow('img_displayFilteredContours')
-    contoursMinArea = 3516
+    contoursMinArea = 1000
     contoursMinPerimeter = 1
     contoursMinWidth = 0
     contoursMaxWidth = 1000000

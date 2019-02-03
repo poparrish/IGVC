@@ -21,13 +21,10 @@ Y_OFFSET_MM=Y_OFFSET_BOX_MM+Y_OFFSET_CHASSIS_MM
 
 def point_to_vector(p):
     [[x, y]] = p
-    print "POINT_TO_VECTOR: ",p
     x = x*X_RES_MM
-    print "SCALED_X: ",x
     y = (y* Y_RES_MM) + Y_OFFSET_MM
     #y*=-1
     x*=-1
-    print "YOFFSET: ",Y_OFFSET_MM
     v = Vec2d.from_point(x, y)
     return v.with_angle(v.angle - 270)
 

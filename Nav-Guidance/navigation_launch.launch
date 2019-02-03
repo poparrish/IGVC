@@ -1,5 +1,5 @@
 <launch>
-    <!--<node name="cameras" pkg="navigation_launch" type="cameras.py" />-->
+    <node name="cameras" pkg="navigation_launch" type="cameras.py" />
     <!--<node name="gps" pkg="navigation_launch" type="gps.py" />-->
     <!--<node name="guidance" pkg="navigation_launch" type="guidance.py" />-->
     <!--<node name="nav" pkg="navigation_launch" type="nav.py" />-->

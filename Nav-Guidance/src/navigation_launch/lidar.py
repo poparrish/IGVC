@@ -13,7 +13,7 @@ MIN_DIST_MM = 500
 MAX_DIST_MM = 10000
 LIDAR_OFFSET_MM = 450  # offset from center
 
-ANGLE_IGNORE_WINDOW = 45  # ignore readings +/- this angle behind Bender
+ANGLE_IGNORE_WINDOW = 90  # ignore readings +/- this angle behind Bender
 
 
 def create_vector((quality, angle, dist)):
