@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 import math
 import pickle
+import traceback
 
+import numpy as np
 import rospy
 from breezyslam.algorithms import RMHC_SLAM
 from breezyslam.sensors import Laser
+from geometry_msgs.msg import Pose, Point
+from nav_msgs.msg import OccupancyGrid, MapMetaData
 from rx import Observable
 from std_msgs.msg import String
 
@@ -14,7 +18,7 @@ from lidar import ANGLE_IGNORE_WINDOW
 from util import rx_subscribe, Vec2d
 
 MAP_SIZE_PIXELS = 500
-MAP_SIZE_METERS = 5
+MAP_SIZE_METERS = 10
 
 MIN_SAMPLES = 50
 MAX_DIST_MM = 10000
@@ -42,7 +46,7 @@ def update_map(slam, map_bytes, (previous, current)):
     scan, position, time = current
 
     # Extract distances and angles from lidar
-    scan = [s for s in scan if in_range(scan)]
+    scan = [s for s in scan if in_range(s)]
     distances = [s.mag for s in scan]
     angles = [skew(s.angle) for s in scan]
 
@@ -101,13 +105,25 @@ def combine_points(lidar, camera):
     return nearest.values()
 
 
+def publish(map_pub, rviz_pub, msg):
+    map_pub.publish(pickle.dumps(msg))
+
+    rviz_pub.publish(OccupancyGrid(
+        info=MapMetaData(resolution=float(MAP_SIZE_METERS) / MAP_SIZE_PIXELS,
+                         width=MAP_SIZE_PIXELS,
+                         height=MAP_SIZE_PIXELS,
+                         origin=Pose(position=Point(x=MAP_SIZE_METERS / -2.0, y=MAP_SIZE_METERS / -2.0))),
+        data=(np.array([(255 - x) / 255.0 * 100.0 for x in msg['map']], dtype=np.int8))))
+
+
 def start_mapping():
     rospy.init_node('mapping')
-    pub = rospy.Publisher(MAP_TOPIC, String, queue_size=1)
+    map_pub = rospy.Publisher(MAP_TOPIC, String, queue_size=1)
+    rviz_pub = rospy.Publisher('/map_rviz', OccupancyGrid, queue_size=1)
 
     # subscribe to nodes
-    lidar = rx_subscribe(LIDAR_TOPIC).filter(keep_scan)
-    camera = rx_subscribe(CAMERA_TOPIC).map(convert_camera_contours)
+    lidar = rx_subscribe(LIDAR_TOPIC).filter(keep_scan).start_with([])
+    camera = rx_subscribe(CAMERA_TOPIC).map(convert_camera_contours).start_with([])
     points = Observable.combine_latest(lidar, camera, combine_points)
 
     odometry = rx_subscribe(ODOMETRY_TOPIC).start_with({'x': 0, 'y': 0})
@@ -126,8 +142,8 @@ def start_mapping():
     points.with_latest_from(odometry, combine_readings) \
         .pairwise() \
         .map(lambda data: update_map(slam, map_bytes, data)) \
-        .subscribe(on_next=lambda msg: pub.publish(pickle.dumps(msg)),
-                   on_error=lambda e: rospy.logerr(e))
+        .subscribe(on_next=lambda msg: publish(map_pub, rviz_pub, msg),
+                   on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 
     rospy.spin()
 
