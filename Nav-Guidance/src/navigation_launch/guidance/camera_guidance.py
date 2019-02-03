@@ -5,21 +5,31 @@ import numpy as np
 from util import Vec2d
 
 # TODO: Get this from camera_info?
-WIDTH_PX = 420
-HEIGHT_PX = 480 - 150
+WIDTH_PX = 640
+HEIGHT_PX = 360
+WIDTH_MM=5510
+HEIGHT_MM=3556
 
 # TODO: Less bodge calculations, actually use trig to calculate projected image size
-X_RES_MM = 3200.0 / WIDTH_PX
-Y_RES_MM = 2200.0 / HEIGHT_PX
-Y_OFFSET_MM = 920
+X_RES_MM = 5510 / WIDTH_PX
+Y_RES_MM = 3556 / HEIGHT_PX
+Y_OFFSET_BOX_MM = HEIGHT_MM-((int(.88*360))*(HEIGHT_MM/HEIGHT_PX))
+Y_OFFSET_CHASSIS_MM=965
+Y_OFFSET_MM=Y_OFFSET_BOX_MM+Y_OFFSET_CHASSIS_MM
+#Y_OFFSET_MM=0
 
 
 def point_to_vector(p):
     [[x, y]] = p
-    x = ((WIDTH_PX / 2) - x) * X_RES_MM
-    y = (HEIGHT_PX - y) * Y_RES_MM - Y_OFFSET_MM
+    print "POINT_TO_VECTOR: ",p
+    x = x*X_RES_MM
+    print "SCALED_X: ",x
+    y = (y* Y_RES_MM) + Y_OFFSET_MM
+    #y*=-1
+    x*=-1
+    print "YOFFSET: ",Y_OFFSET_MM
     v = Vec2d.from_point(x, y)
-    return v.with_angle(v.angle - 90)
+    return v.with_angle(v.angle - 270)
 
 
 def contours_to_vectors(contours):
