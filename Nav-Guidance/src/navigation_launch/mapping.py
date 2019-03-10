@@ -2,14 +2,19 @@
 import math
 import pickle
 import traceback
+from time import sleep
 
+import cv2
 import numpy as np
 import rospy
+import sensor_msgs
 from breezyslam.algorithms import RMHC_SLAM
 from breezyslam.sensors import Laser
 from geometry_msgs.msg import Pose, Point
 from nav_msgs.msg import OccupancyGrid, MapMetaData
 from rx import Observable
+from rx.linq.observable.withlatestfrom import with_latest_from
+from sensor_msgs.msg import Image
 from std_msgs.msg import String
 
 from constants import MAP_TOPIC, LIDAR_TOPIC, ODOMETRY_TOPIC, CAMERA_TOPIC
@@ -17,11 +22,15 @@ from guidance import contours_to_vectors
 from lidar import ANGLE_IGNORE_WINDOW
 from util import rx_subscribe, Vec2d
 
-MAP_SIZE_PIXELS = 500
-MAP_SIZE_METERS = 10
+MAP_SIZE_PIXELS = 100
+MAP_SIZE_METERS = 5
 
 MIN_SAMPLES = 50
 MAX_DIST_MM = 10000
+
+SAFE_DIST_PIXELS = int(0.5 * MAP_SIZE_PIXELS / MAP_SIZE_METERS)
+
+UNKNOWN = 127  # unmapped/unknown value set in map
 
 
 class RPLidarA1(Laser):
@@ -105,21 +114,27 @@ def combine_points(lidar, camera):
     return nearest.values()
 
 
-def publish(map_pub, rviz_pub, msg):
-    map_pub.publish(pickle.dumps(msg))
+def pixel_to_grid(x):
+    return (255 - x) / 255.0 * 127.0 if x != UNKNOWN else -1
 
-    rviz_pub.publish(OccupancyGrid(
+
+def pixel_to_byte(x):
+    return -x * 255.0 / 127.0 + 255 if x != -1 else UNKNOWN
+
+
+def publish(map_pub, msg):
+    data = [pixel_to_grid(x) for x in msg['map']]
+    map_pub.publish(OccupancyGrid(
         info=MapMetaData(resolution=float(MAP_SIZE_METERS) / MAP_SIZE_PIXELS,
                          width=MAP_SIZE_PIXELS,
                          height=MAP_SIZE_PIXELS,
                          origin=Pose(position=Point(x=MAP_SIZE_METERS / -2.0, y=MAP_SIZE_METERS / -2.0))),
-        data=(np.array([(255 - x) / 255.0 * 100.0 for x in msg['map']], dtype=np.int8))))
+        data=data))
 
 
 def start_mapping():
     rospy.init_node('mapping')
-    map_pub = rospy.Publisher(MAP_TOPIC, String, queue_size=1)
-    rviz_pub = rospy.Publisher('/map_rviz', OccupancyGrid, queue_size=1)
+    map_pub = rospy.Publisher(MAP_TOPIC, OccupancyGrid, queue_size=1)
 
     # subscribe to nodes
     lidar = rx_subscribe(LIDAR_TOPIC).filter(keep_scan).start_with([])
@@ -133,7 +148,7 @@ def start_mapping():
         laser=RPLidarA1(),
         map_size_pixels=MAP_SIZE_PIXELS,
         map_size_meters=MAP_SIZE_METERS,
-        hole_width_mm=100,
+        hole_width_mm=500,
         sigma_theta_degrees=0,  # disable directional prediction; we have a compass
         sigma_xy_mm=0
     )
@@ -142,7 +157,7 @@ def start_mapping():
     points.with_latest_from(odometry, combine_readings) \
         .pairwise() \
         .map(lambda data: update_map(slam, map_bytes, data)) \
-        .subscribe(on_next=lambda msg: publish(map_pub, rviz_pub, msg),
+        .subscribe(on_next=lambda msg: publish(map_pub, msg),
                    on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 
     rospy.spin()
