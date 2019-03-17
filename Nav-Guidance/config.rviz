@@ -8,7 +8,7 @@ Panels:
         - /Status1
         - /Map1
         - /GridMap1
-        - /GridMap1/Status1
+        - /Pose1
       Splitter Ratio: 0.5
     Tree Height: 768
   - Class: rviz/Selection
@@ -82,6 +82,21 @@ Visualization Manager:
       Unreliable: false
       Use Rainbow: true
       Value: true
+    - Alpha: 1
+      Axes Length: 0.100000001
+      Axes Radius: 0.00999999978
+      Class: rviz/Pose
+      Color: 255; 255; 255
+      Enabled: true
+      Head Length: 0.0599999987
+      Head Radius: 0.0500000007
+      Name: Pose
+      Shaft Length: 0.100000001
+      Shaft Radius: 0.0250000004
+      Shape: Arrow
+      Topic: /map_pose
+      Unreliable: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -107,7 +122,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 3.8530519
+      Distance: 6.33200359
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -122,10 +137,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.5097996
+      Pitch: 0.784799695
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.03046703
+      Yaw: 2.7504642
     Saved: ~
 Window Geometry:
   Displays:

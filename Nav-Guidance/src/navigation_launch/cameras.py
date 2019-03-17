@@ -1,28 +1,18 @@
 #!/usr/bin/env python
-import rospy
-from camera_msg import CameraMsg
-from std_msgs.msg import String
-import cv2
-import numpy as np
-from grip2 import GripPipelineTest
-from remove_orange import RemoveOrange
-from camera_info import CameraInfo
-import math
 from enum import Enum
-import sys, os
-#temp
+
+import cv2
+# temp
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import datetime as dt
-from operator import itemgetter
-import itertools
+import rospy
+from std_msgs.msg import String
 
-
+import topics
+from camera_info import CameraInfo
+from camera_msg import CameraMsg
 
 cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
 #cam_name = 2
-CAMERA_NODE = "CAMERA"
 
 
 def callback(x):
@@ -201,8 +191,8 @@ def camera_processor():
     cam = cv2.VideoCapture(cam_name)
 
     #init ros & camera stuff
-    pub = rospy.Publisher(CAMERA_NODE, String, queue_size=10)
-    rospy.init_node(CAMERA_NODE)
+    pub = rospy.Publisher(topics.CAMERA, String, queue_size=10)
+    rospy.init_node('camera')
     rate = rospy.Rate(10)
 
     rawWidth = 640

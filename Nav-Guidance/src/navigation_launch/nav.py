@@ -2,16 +2,13 @@
 import pickle
 
 import rospy
-from rx.subjects import BehaviorSubject
 from rx import Observable
 from std_msgs.msg import String
 
-from cameras import CAMERA_NODE
+import topics
 from gps import GPS_NODE
 from guidance import contours_to_vectors
-from lidar import LIDAR_NODE
 from util import rx_subscribe
-from camera_msg import CameraMsg
 
 NAV_HZ = 10
 NAV_NODE = 'NAV'
@@ -27,10 +24,10 @@ def main():
     rospy.init_node(NAV_NODE)
     pub = rospy.Publisher(NAV_NODE, String, queue_size=10)
 
-    camera = rx_subscribe(CAMERA_NODE)
-    lidar = rx_subscribe(LIDAR_NODE)
-    #camera = BehaviorSubject(CameraMsg(contours=[]))
-    #lidar = BehaviorSubject([])
+    camera = rx_subscribe(topics.CAMERA)
+    lidar = rx_subscribe(topics.LIDAR)
+    # camera = BehaviorSubject(CameraMsg(contours=[]))
+    # lidar = BehaviorSubject([])
     gps = rx_subscribe(GPS_NODE)
 
     rospy.loginfo('Nav waiting for messages...')

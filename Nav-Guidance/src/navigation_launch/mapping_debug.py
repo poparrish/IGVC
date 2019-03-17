@@ -5,7 +5,7 @@ import rospy
 from roboviz import MapVisualizer
 from std_msgs.msg import String
 
-from constants import MAP_TOPIC
+from topics import MAP_TOPIC
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 
 map_data = None

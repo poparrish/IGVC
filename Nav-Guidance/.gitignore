@@ -8,3 +8,6 @@ srv_gen/
 CMakeFiles/
 catkin_generated
 catkin
+
+.idea/
+*.iml

@@ -1,24 +1,13 @@
 #!/usr/bin/env python
-import pickle
-
-import math
-import numpy as np
-import rospy
-from cameras import CAMERA_NODE
-from util import rx_subscribe
-from rx import Observable
-from std_msgs.msg import String
-from lidar import LIDAR_TOPIC
-from lidar import start_lidar_noROS
-from line_map_nav import LINE_MAP_HZ, LINE_MAP_NAV_NODE
-from rx import Observable
 
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 
+import numpy as np
+import rospy
+from rx import Observable
 
-from guidance import contours_to_vectors
-
+from line_map_nav import LINE_MAP_HZ, LINE_MAP_NAV_NODE
+from util import rx_subscribe
 
 LINE_MAP_GUIDANCE_NODE='LINE_MAP_GUIDANCE_NODE'
 

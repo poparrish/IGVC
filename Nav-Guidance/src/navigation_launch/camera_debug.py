@@ -2,9 +2,7 @@ import pickle
 import rospy
 import cv2
 from camera_msg import CameraMsg
-from cameras import CAMERA_NODE
-from gps import GPS_NODE
-from lidar import LIDAR_NODE
+import topics
 from std_msgs.msg import String
 
 NAV_HZ = 5
@@ -52,9 +50,9 @@ class Navigation():
 def main():
     nav = Navigation()
     rospy.init_node(NAV_NODE, anonymous=True)
-    rospy.Subscriber(CAMERA_NODE, String, nav.unpickleCameraMsg)
-    rospy.Subscriber(GPS_NODE, String, nav.unpickleGpsMsg)
-    rospy.Subscriber(LIDAR_NODE, String, nav.unpickleLidarMsg)
+    rospy.Subscriber(topics.CAMERA, String, nav.unpickleCameraMsg)
+    rospy.Subscriber(topics.GPS, String, nav.unpickleGpsMsg)
+    rospy.Subscriber(topics.LIDAR, String, nav.unpickleLidarMsg)
     nav_publisher = rospy.Publisher(NAV_NODE, String, queue_size = 10)
     rate = rospy.Rate(NAV_HZ)
     while not rospy.is_shutdown():

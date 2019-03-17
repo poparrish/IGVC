@@ -6,7 +6,7 @@ import rospy
 from rplidar import RPLidar, MAX_MOTOR_PWM, RPLidarException
 from std_msgs.msg import String
 
-from constants import LIDAR_TOPIC
+import topics
 from util import Vec2d
 
 MIN_DIST_MM = 500
@@ -32,7 +32,7 @@ def convert_scan_to_vectors(scan):
 
 def start_lidar(device):
     rospy.init_node('lidar')
-    pub = rospy.Publisher(LIDAR_TOPIC, String, queue_size=1)
+    pub = rospy.Publisher(topics.LIDAR, String, queue_size=1)
 
     lidar = RPLidar(device)
     lidar.stop_motor()
