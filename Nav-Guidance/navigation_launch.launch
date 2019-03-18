@@ -16,7 +16,8 @@
 
     <!--<node name="lidar" pkg="navigation_launch" type="lidar.py" output="screen" />-->
     <node pkg="rosbag" type="play" name="player" args="$(dirname)/2019-01-27-14-47-19-lidar-odometry.bag"/>
-    <node name="mapping" pkg="navigation_launch" type="mapping.py" output="screen"  />
+    <node name="mapping" pkg="navigation_launch" type="mapping.py"  />
+    <node name="path_planner" pkg="navigation_launch" type="path_planner.py" output="screen"  />
     <node name="potential_field" pkg="navigation_launch" type="navigation_launch_potential_field" />
 
 <!--

@@ -6,6 +6,8 @@
 #include "grid_map_core/grid_map_core.hpp"
 #include "grid_map_ros/grid_map_ros.hpp"
 #include <grid_map_cv/grid_map_cv.hpp>
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
 
 using namespace grid_map;
 using namespace ros;
@@ -50,19 +52,21 @@ class PotentialFieldNode {
 
 private:
     const Publisher &gridPub;
+    const Publisher &pathPub;
     const cv::Mat repulsiveKernel;
     const cv::Mat attractiveKernel;
 
 public:
-    PotentialFieldNode(const Publisher &gridPub)
+    PotentialFieldNode(const Publisher &gridPub, const Publisher &pathPub)
             : gridPub(gridPub),
+              pathPub(pathPub),
               repulsiveKernel(createRepulsiveKernel()),
               attractiveKernel(createAttractiveKernel()) {}
 
     void mapUpdated(const nav_msgs::OccupancyGrid &msg) {
         const auto repulsiveLayer = "repulsivePotential";
         const auto attractiveLayer = "attractivePotential";
-        const auto potential = "potential";
+        const std::string potential = "potential";
 
         // create map from OccupancyGrid
         GridMap map({repulsiveLayer, attractiveLayer, potential});
@@ -74,8 +78,14 @@ public:
 
         // calculate repulsive potential
         cv::Mat repulsivePotential;
-        calculatePotential(mapImg, repulsivePotential, repulsiveKernel);
-        GridMapCvConverter::addLayerFromImage<unsigned short, 1>(repulsivePotential, repulsiveLayer, map, 0.0, 0.3);
+        int size = 10;
+        cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT,
+                cv::Size(2 * size + 1, 2 * size + 1),
+                                                    cv::Point(size, size));
+        cv::Mat closed;
+        cv::morphologyEx(mapImg, closed, cv::MORPH_CLOSE, element);
+        calculatePotential(closed, repulsivePotential, repulsiveKernel);
+        GridMapCvConverter::addLayerFromImage<unsigned short, 1>(repulsivePotential, repulsiveLayer, map, 0.0, 1.0);
 
         // create artificial attractor north of origin
         cv::Mat attractors = cv::Mat::zeros(mapImg.rows, mapImg.cols, CV_16UC1);
@@ -97,6 +107,10 @@ public:
         grid_map_msgs::GridMap message;
         GridMapRosConverter::toMessage(map, message);
         gridPub.publish(message);
+
+        cv_bridge::CvImage outImg;
+        GridMapRosConverter::toCvImage(map, potential, sensor_msgs::image_encodings::MONO16, outImg);
+        pathPub.publish(outImg.toImageMsg());
     }
 };
 
@@ -105,8 +119,9 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "potential_field");
     ros::NodeHandle n;
 
-    auto pub = n.advertise<grid_map_msgs::GridMap>("/potential_field", 1, true);
-    PotentialFieldNode node{pub};
+    auto pub = n.advertise<grid_map_msgs::GridMap>("/grid", 1, true);
+    auto pathPub = n.advertise<cv_bridge::CvImage>("/potential_field", 1, true);
+    PotentialFieldNode node{pub, pathPub};
 
     ros::Subscriber sub = n.subscribe("/map", 1, &PotentialFieldNode::mapUpdated, &node);
     ros::spin();
