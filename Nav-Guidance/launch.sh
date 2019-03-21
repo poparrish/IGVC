@@ -10,8 +10,7 @@ chmod +x src/navigation_launch/lidar.py
 chmod +x src/navigation_launch/nav.py
 chmod +x src/navigation_launch/mapping.py
 chmod +x src/navigation_launch/mapping_debug.py
-chmod +x src/navigation_launch/path_planner.py
+chmod +x src/navigation_launch/potential_field.py
 chmod +x src/navigation_launch/Control_Node.py
-
 
 roslaunch navigation_launch.launch

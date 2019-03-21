@@ -221,7 +221,7 @@ def camera_processor():
         contours = convert_to_cartesian(camera_info.map_width, camera_info.map_height, contours)
 
         #build the camera message with the contours and binary image
-        local_map_msg = CameraMsg(local_map_val=img_displayBirdsEye, contours=contours, camera_info=camera_info)
+        local_map_msg = CameraMsg(contours=contours, camera_info=camera_info)
 
         #make bytestream and pass if off to ros
         local_map_msg_string = local_map_msg.pickleMe()
@@ -384,11 +384,11 @@ if __name__ == '__main__':
     ilowV = 0
     ihighV = 210
 
-    ilowH = 49
-    ihighH = 64
-    ilowS = 43
-    ihighS = 206
-    ilowV = 147
+    ilowH = 0
+    ihighH = 76
+    ilowS = 66
+    ihighS = 156
+    ilowV = 131
     ihighV = 255
 
     # ilowH = 44

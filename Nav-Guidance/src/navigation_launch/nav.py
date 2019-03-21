@@ -6,7 +6,6 @@ from rx import Observable
 from std_msgs.msg import String
 
 import topics
-from gps import GPS_NODE
 from guidance import contours_to_vectors
 from util import rx_subscribe
 
@@ -28,7 +27,7 @@ def main():
     lidar = rx_subscribe(topics.LIDAR)
     # camera = BehaviorSubject(CameraMsg(contours=[]))
     # lidar = BehaviorSubject([])
-    gps = rx_subscribe(GPS_NODE)
+    gps = rx_subscribe(topics.GPS)
 
     rospy.loginfo('Nav waiting for messages...')
     combined = Observable.combine_latest(camera, lidar, gps, process_state)# \

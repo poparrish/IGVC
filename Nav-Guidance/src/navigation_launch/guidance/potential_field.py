@@ -3,8 +3,8 @@ from util import Vec2d, avg
 ATTRACTOR_THRESHOLD_MM = 1500
 REPULSOR_THRESHOLD_MM = 1500
 
-R_FACTOR = 1.0 / (500 ** 2)  # 750 is the distance at which the repulsors should start to overpower the attractors
-A_FACTOR = 25.0 / (1500 ** 2)  # dumb hack to ensure 25
+R_FACTOR = 1
+A_FACTOR = 1
 
 NOISE_THRESHOLD = 3
 
@@ -45,7 +45,7 @@ def calc_attractive_force(attractor, position):
 def calc_repulsive_force(repulsor, position, weight):
     repulsor -= position
     if repulsor.mag <= REPULSOR_THRESHOLD_MM:
-        f = 0.5 * R_FACTOR * (REPULSOR_THRESHOLD_MM - repulsor.mag) ** 2  # quadratic
+        f = 0.5 * R_FACTOR * (repulsor.mag / REPULSOR_THRESHOLD_MM) ** 2  # quadratic
     else:
         f = 0  # out of range
 
@@ -62,27 +62,24 @@ def sum_repulsors(vecs, position, cluster_mm, weight):
     clusters = partition(vecs, cluster_mm)
     return sum([calc_repulsive_force(r, position, weight) for r in clusters])
 
+
 def mask_lidar_in_cam(lidar_vec, cam_vec, tol):
     to_remove = set()
     for l_v in lidar_vec:
         for i in xrange(len(cam_vec)):
             c_v = cam_vec[i]
-            if (c_v.x-tol < l_v.x < c_v.x+tol) and (c_v.y-tol < l_v.y < c_v.y+tol):
+            if (c_v.x - tol < l_v.x < c_v.x + tol) and (c_v.y - tol < l_v.y < c_v.y + tol):
                 to_remove.add(i)
-    for ind in sorted(to_remove, reverse = True):
+    for ind in sorted(to_remove, reverse=True):
         del cam_vec[ind]
     return cam_vec
 
-def calculate_potential(lidar_data, camera_data, goal, position=zero):
-    camera_data = [v for c in camera_data for v in c]
-    # camera_data = mask_lidar_in_cam(lidar_data, camera_data, 50)
-    a = calc_attractive_force(goal, position)
-    rl = sum_repulsors(lidar_data, position, cluster_mm=150, weight=2)
-    rc = sum_repulsors(camera_data, position, cluster_mm=500, weight=2)
 
-    bad_hack = False
-    if bad_hack:
-        return a - rc
+def calculate_potential(path, goal, position=zero):
+    vecs = [Vec2d.from_point(p.pose.position.x, p.pose.position.y) for p in path.poses[:10]]
+    vecs = [v.with_magnitude(1) for v in vecs]
 
-
-    return a - rl - rc
+    if len(vecs) > 0:
+        return avg(vecs)
+    else:
+        return Vec2d(0, 0)

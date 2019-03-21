@@ -62,7 +62,7 @@ def start():
     rospy.init_node('path_planning')
 
     bridge = CvBridge()
-    pub = rospy.Publisher('/path', Path, queue_size=1)
+    pub = rospy.Publisher(topics.PATH, Path, queue_size=1)
 
     potential_field = rx_subscribe(topics.POTENTIAL_FIELD, Image, lambda data: bridge.imgmsg_to_cv2(data, "mono16"))
     position = rx_subscribe(topics.MAP_POSE, PoseStamped, None)

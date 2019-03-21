@@ -7,10 +7,11 @@ from pymavlink import mavutil, mavextra
 from pymavlink.dialects.v20.common import GPS_FIX_TYPE_3D_FIX
 from std_msgs.msg import String, Int32
 
+from navigation_launch import topics
+
 GPS_NODE = 'GPS'
 GPS_REFRESH_RATE = 10
-GPS_BIAS = 0#160-90-30#58
-
+GPS_BIAS = 0  # 160-90-30#58
 
 xOffset = 0
 yOffset = 0
@@ -21,6 +22,7 @@ Roll = 0
 Yaw = 0
 
 heading = 0
+
 
 def get_location(mav):
     global heading
@@ -44,14 +46,16 @@ def init_mavlink(device):
 
     return mav
 
+
 def new_heading(data):
     global heading
     heading = data.data
 
+
 def start_gps(device):
-    
-    pub = rospy.Publisher(GPS_NODE, String, queue_size=GPS_REFRESH_RATE * 10)
     rospy.init_node(GPS_NODE)
+
+    pub = rospy.Publisher(topics.GPS, String, queue_size=GPS_REFRESH_RATE * 10)
     rospy.Subscriber('heading', Int32, new_heading)
     mav = init_mavlink(device)
     pevent = mavutil.periodic_event(GPS_REFRESH_RATE)
@@ -66,7 +70,7 @@ def start_gps(device):
                 rospy.loginfo('Publishing gps %s' % loc)
                 pub.publish(pickle.dumps(loc))
 
-        #why this and not ros.wait()
+        # why this and not ros.wait()
         time.sleep(0.01)
 
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import pickle
 
 import numpy as np
 import rospy
@@ -8,11 +7,11 @@ from rospy_tutorials.msg import Floats
 from rx import Observable
 from std_msgs.msg import String
 
-from gps import GPS_NODE
+import topics
 from guidance import calculate_potential, ATTRACTOR_THRESHOLD_MM, calculate_line_angle
 from guidance.gps_guidance import dist_to_waypoint, calculate_gps_heading
 from guidance.potential_field import partition
-from nav import rx_subscribe, NAV_NODE
+from nav import rx_subscribe
 from util import Vec2d, avg, to180
 
 GUIDANCE_NODE = "GUIDANCE"
@@ -243,8 +242,8 @@ def main():
     def valid_message(msg):
         return not isinstance(msg['camera'], basestring)
 
-    nav = rx_subscribe(NAV_NODE).filter(valid_message)
-    gps = rx_subscribe(GPS_NODE).buffer_with_count(GPS_BUFFER, 1)
+    nav = rx_subscribe(topics.NAV).filter(valid_message)
+    gps = rx_subscribe(topics.GPS).buffer_with_count(GPS_BUFFER, 1)
 
     # recompute state whenever nav or gps emits
     state = Observable.combine_latest(nav, gps, lambda n, g: (n, g)) \
