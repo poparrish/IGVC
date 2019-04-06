@@ -152,6 +152,8 @@ def start_mapping():
         .map(lambda msg: [v for contour in (contours_to_vectors(msg.contours)) for v in contour]) \
         .start_with([])
 
+    camera = filter_barrel_lines(camera, angle_range=4,lidar_vecs=lidar,mag_cusion=300)
+
     odometry = rx_subscribe(topics.ODOMETRY) \
         .start_with({'x': 0, 'y': 0})
 
@@ -165,9 +167,80 @@ def start_mapping():
                        on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 
     publish_map(combined_map, lidar.combine_latest(camera, lambda l, c: l + c))
+
     publish_map(camera_map, camera)
 
     rospy.spin()
+
+
+
+def flatten_contours(pointCloud):
+    """merges contours"""
+    cloud = []
+    contour_count=0
+    for contour in pointCloud:
+        contour_count+=1
+        for point in contour:
+            cloud.append(point)
+    return cloud
+
+
+def filter_barrel_lines(camera,angle_range,lidar_vecs,mag_cusion):
+    """
+    This removes lines the camera sees that are likely attached to a barrel. It groups all camera data into chunks
+    determined by size angle_range. If a laser scan is in the angle_range of the camera chunk and the laser scan is
+    in front of the camera chunk it pop() the chunk. mag_cusion allows us some room for lines that may be on top of or
+    slightly in front of the laser scan; its intent is to buffer camera vibrations that are independent from the chassis.
+    :param camera_vecs: list[] of camera_vec objects
+    :param angle_range: int  0-10 range reccomended
+    :param lidar_vecs: list[] of lidar_vec objects
+    :param mag_cusion: int min 300 reccomended
+    :return: camera_vecs input data type with barrel noise removed
+    """
+
+    camera_vecs = flatten_contours(camera)
+    if len(camera_vecs) == 0:
+        return camera_vecs
+    else:
+        camera_vecs.sort(key=lambda x: x.angle)
+        start_iter_angle =int(camera_vecs[0].angle)
+        try:
+            camera_groups = []
+            vec_group = []
+            camera_vecs_iterator=iter(camera_vecs)
+            angle_start = start_iter_angle
+            total_dist=0
+            while True:
+                next_vec=next(camera_vecs_iterator)
+                if next_vec.angle < angle_start + angle_range:#between i and i+range so add to group
+                    vec_group.append(next_vec)
+                    total_dist+=next_vec.mag
+                else:
+                    avg_dist = total_dist/len(vec_group)
+                    camera_groups.append([angle_start,angle_range,avg_dist,vec_group])
+                    angle_start+=angle_range
+                    vec_group=[]
+                    vec_group.append(next_vec)
+                    total_dist=next_vec.mag
+        except StopIteration:
+            pass
+
+        filtered_camera_groups = camera_groups
+        for next_lidar_vec in lidar_vecs:
+            for camera_group in camera_groups:
+                if int(next_lidar_vec.angle) in range(camera_group[0], camera_group[0] + camera_group[1]):  # check if lidar scan indicates camera data should be thrown
+                    #if next_lidar_vec.mag < 2500:#for testing in lab
+                    if next_lidar_vec.mag < camera_group[2] + mag_cusion:
+                        if camera_group in filtered_camera_groups:
+                            filtered_camera_groups.remove(camera_group)
+                    break
+
+        filtered_camera_vecs=[]
+        for group in filtered_camera_groups:
+            for vec in group[3]:
+                filtered_camera_vecs.append(vec)
+
+        return filtered_camera_vecs
 
 
 if __name__ == '__main__':
