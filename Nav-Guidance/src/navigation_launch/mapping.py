@@ -152,7 +152,7 @@ def start_mapping():
         .map(lambda msg: [v for contour in (contours_to_vectors(msg.contours)) for v in contour]) \
         .start_with([])
 
-    camera = filter_barrel_lines(camera, angle_range=4,lidar_vecs=lidar,mag_cusion=300)
+#     camera = filter_barrel_lines(camera, angle_range=4,lidar_vecs=lidar,mag_cusion=300)
 
     odometry = rx_subscribe(topics.ODOMETRY) \
         .start_with({'x': 0, 'y': 0})
