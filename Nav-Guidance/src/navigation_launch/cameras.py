@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from enum import Enum
-
+import pickle
 import cv2
 # temp
 import numpy as np
@@ -10,6 +10,14 @@ from std_msgs.msg import String
 import topics
 from camera_info import CameraInfo
 from camera_msg import CameraMsg
+import math
+import pprint
+from util import rx_subscribe, Vec2d
+from rx import Observable
+from guidance import contours_to_vectors
+
+
+
 
 cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
 #cam_name = 2
@@ -145,14 +153,15 @@ def convert_to_cartesian(WIDTH,HEIGHT, contours):
     to where the lidar is. this happens to be at the same height in pixels as the blackout box we configure in the
     CameraInfo class.rectangle_height.
     For some fucked up reason the contours that CV outputs has an extra list layer around the individual points...
-    the point_ is just going through that layer. so don't let it confuse"""
-
-
+    the point_ is just going through that layer. so don't let it confuse
+    To avoid looping a second time we also have the option to remove 'thin' the contours by removing
+    n number of points along the perimiter"""
     for contour in contours:
         for point_ in contour:
+
             for point in point_:#this is the layer in each contour that has the points
                 #shift x to center
-                # print "OLDPOINT: ", point
+
                 if point[0] > WIDTH/2:
                     point[0] = point[0]-WIDTH/2
                 elif point[0] < WIDTH / 2:
@@ -169,29 +178,128 @@ def convert_to_cartesian(WIDTH,HEIGHT, contours):
                     point[1] = HEIGHT / 2 - point[1]
                 else:
                     point[1] = 0
-                #point[1]*=-1
-                #shift y down to top of the occlusion box
-
-                #print "SHIFTEDPOINT: ",point
-
+        # print contour
     return contours
-    # print contours
-    # try:
-    #     print "contours0",contours[0][0][:][0]
-    #     contours[0][0][0] = 0,0
-    #     print "modifiedcontour: ",contours[0][0][0]
-    #     print "full contour: ",contours
-    # except:
-    #     pass
+
+def contour_slope(contour):
+    if contour is None:
+        return 0
+
+    x = np.array([v.x for v in contour])
+    y = np.array([v.y for v in contour])
+
+    [slope, intercept] = np.polyfit(x, y, 1)
+    return math.degrees(math.atan(slope))
+
+def closest_contour_slope(contours):
+    i = 0#track which contour
+    results = []
+    for contour in contours:#find closest point per contour
+        closest = 10000000#just a large starting #
+        for vec in contour:
+            if closest > vec.mag:
+                closest = vec.mag
+        results.append([i,closest])
+        i+=1
 
 
+    for result in results:
+        closest = 10000000
+        closest_contour = []
+        if closest > result[1]:
+            closest = result[1]
+            closest_contour = contours[result[0]]
+
+
+    return contour_slope(closest_contour)
+
+def flatten_contours(pointCloud):
+    """merges contours"""
+    cloud = []
+    contour_count=0
+    for contour in pointCloud:
+        contour_count+=1
+        for point in contour:
+            cloud.append(point)
+    return cloud
+
+
+def filter_barrel_lines(camera,angle_range,lidar_vecs,mag_cusion):
+    """
+    This removes lines the camera sees that are likely attached to a barrel. It groups all camera data into chunks
+    determined by size angle_range. If a laser scan is in the angle_range of the camera chunk and the laser scan is
+    in front of the camera chunk it pop() the chunk. mag_cusion allows us some room for lines that may be on top of or
+    slightly in front of the laser scan; its intent is to buffer camera vibrations that are independent from the chassis.
+    :param camera_vecs: list[] of camera_vec objects
+    :param angle_range: int  0-10 range reccomended
+    :param lidar_vecs: list[] of lidar_vec objects
+    :param mag_cusion: int min 300 reccomended
+    :return: camera_vecs input data type with barrel noise removed
+    """
+
+    camera_vecs = flatten_contours(camera)
+    if len(camera_vecs) == 0:
+        return camera_vecs
+    else:
+        camera_vecs.sort(key=lambda x: x.angle)
+        start_iter_angle =int(camera_vecs[0].angle)
+        try:
+            camera_groups = []
+            vec_group = []
+            camera_vecs_iterator=iter(camera_vecs)
+            angle_start = start_iter_angle
+            total_dist=0
+            while True:
+                next_vec=next(camera_vecs_iterator)
+                if next_vec.angle < angle_start + angle_range:#between i and i+range so add to group
+                    vec_group.append(next_vec)
+                    total_dist+=next_vec.mag
+                else:
+                    avg_dist = total_dist/len(vec_group)
+                    camera_groups.append([angle_start,angle_range,avg_dist,vec_group])
+                    angle_start+=angle_range
+                    vec_group=[]
+                    vec_group.append(next_vec)
+                    total_dist=next_vec.mag
+        except StopIteration:
+            pass
+
+        filtered_camera_groups = camera_groups
+        for next_lidar_vec in lidar_vecs:
+            for camera_group in camera_groups:
+                if int(next_lidar_vec.angle) in range(camera_group[0], camera_group[0] + camera_group[1]):  # check if lidar scan indicates camera data should be thrown
+                    #if next_lidar_vec.mag < 2500:#for testing in lab
+                    if next_lidar_vec.mag < camera_group[2] + mag_cusion:
+                        if camera_group in filtered_camera_groups:
+                            filtered_camera_groups.remove(camera_group)
+                    break
+
+        filtered_camera_vecs=[]
+        for group in filtered_camera_groups:
+            for vec in group[3]:
+                filtered_camera_vecs.append(vec)
+
+        return filtered_camera_vecs
+
+def update_lidar(laser_pickle):
+    global lidar
+    lidar=laser_pickle
 
 def camera_processor():
+
+
     # open a video capture feed
     cam = cv2.VideoCapture(cam_name)
 
     #init ros & camera stuff
     pub = rospy.Publisher(topics.CAMERA, String, queue_size=10)
+    no_barrel_pub=rospy.Publisher(topics.NO_BARREL_CAMERA,String, queue_size=10)
+    global lidar
+    lidar = rx_subscribe(topics.LIDAR)
+
+    Observable.combine_latest(lidar, lambda n: (n)) \
+        .subscribe(update_lidar)
+
     rospy.init_node('camera')
     rate = rospy.Rate(10)
 
@@ -200,6 +308,8 @@ def camera_processor():
     #camera_info = CameraInfo(53,38,76,91,134)#ground level#half (134 inches out)
     camera_info = CameraInfo(53,40,76,180,217,croppedWidth,croppedHeight)#ground level# 3/4 out
     while not rospy.is_shutdown():
+
+
         #grab a frame
         ret_val, img = cam.read()
 
@@ -218,136 +328,23 @@ def camera_processor():
         #process the cropped image. returns a "birds eye" of the contours & binary image
         img_displayBirdsEye, contours = process_image(crop_img, camera_info)
 
+
         contours = convert_to_cartesian(camera_info.map_width, camera_info.map_height, contours)
+        vec2d_contour = contours_to_vectors(contours)#replaces NAV
+        filtered_contours = filter_barrel_lines(camera=vec2d_contour, angle_range=4,lidar_vecs=lidar,mag_cusion=300)
+
 
         #build the camera message with the contours and binary image
         local_map_msg = CameraMsg(contours=contours, camera_info=camera_info)
+        filtered_map_msg=CameraMsg(contours=filtered_contours,camera_info=camera_info)
 
         #make bytestream and pass if off to ros
         local_map_msg_string = local_map_msg.pickleMe()
+        filtered_map_msg_string=filtered_map_msg.pickleMe()
+
         #rospy.loginfo(local_map_msg_string)
         pub.publish(local_map_msg_string)
-
-        #temp
-
-
-
-        for target in contours:
-        #target = max(contours, key=lambda x: cv2.contourArea(x))
-            cv2.drawContours(img_displayBirdsEye, [target], -1, [0, 0, 255], -1)  # debug
-
-            # #since contours are not in order we need to order them. Y coord pair closest to bender chassis as the first
-            # print "target",target
-            # otherLine = []
-            # for i in range(0,len(target[:][:])):
-            #     if target[i][0][1] !=0:#leave out flat areas
-            #         line.append([target[i][0][0],target[i][0][1]])
-            # print "line: ",otherLine
-            # sorted_contour = np.array(sorted(otherLine,key = itemgetter(1)))
-            # print "sorted",sorted_contour
-            # print "contour_length: ",len(sorted_contour)
-            # print "next_contour: ", sorted_contour[0]
-
-
-
-            # grouped = list(grouper(10,sorted_contour))
-            # print "grouped: ",grouped[0]
-
-
-            # windowSize=4
-            # windowCount =0
-            # averagedContours = []
-            # numWindows=int(math.floor(len(sorted_contour)/windowSize))
-            # contourCount = 0
-            # for window in range(0,numWindows):
-            #     print"windowSize: ",windowSize
-            #     print"numWindows: ",numWindows
-            #     #print "whileCOndition: ",windowSize%sorted_contour[contourCount][1]
-            #     to_average = []
-            #     firstPass = True
-            #     try:
-            #         while sorted_contour[contourCount][1]%windowSize !=0 or firstPass:#working our way through the next window
-            #             print"enteredLoop"
-            #             print"contourCount: ",contourCount
-            #             print"windowCount: ",windowCount
-            #             to_average.append(sorted_contour[contourCount][0])
-            #             contourCount +=1
-            #             print "To_average: ",to_average
-            #             print "InnerLenToAverage: ",len(to_average)
-            #             firstPass = False
-            #         # print "while logic: ",sorted_contour[contourCount][1] % windowSize
-            #         newAverage = int(math.floor(sum(to_average) / len(to_average)))
-            #         averagedContours.append([newAverage, windowSize * windowCount / 2])
-            #         print"averagedContours: ", averagedContours
-            #         windowCount += 1
-            #     except:
-            #         pass
-            #
-            #
-            # print "Averaged_Contours: ",averagedContours
-            # averagedContours=np.array(averagedContours)
-
-            # just example of fitting
-            # xs = sorted_contour[:,0].flatten(order = 'C')
-            # # print"flatenedXlength: ",len(x)
-            # # print "x: ",x
-            # ys = sorted_contour[:,1].flatten(order = 'C')
-            # print"flatenedYlength: ",len(y)
-            # print "y: ",y
-            #print "FlattenedX: ",x
-
-            #rebuild list
-            # fX = []
-            # fY = []
-            # for i in range(0,len(x)):
-            #     if y[i]!=134 and y[i]!=0 and x[i]!=134 and x[i]!=0:
-            #         fX.append(x[i])
-            #         fY.append(y[i])
-            #         line.append([x[i],y[i]])
-            # print "filteredLengthx: ",len(fX)
-            # print "filteredLengthy: ",len(fY)
-            # sX = []
-            # sY = []
-            # sorted_contour = sorted(line, key=itemgetter(1))
-            # print "sorted contour: ",sorted_contour
-            # for i in range(0,len(sorted_contour)):
-            #     sX.append(sorted_contour[i][0])
-            #     sY.append(sorted_contour[i][1])
-
-
-            # x = averagedContours[:, 0].flatten(order='C')
-            # # print"flatenedXlength: ",len(x)
-            # # print "x: ",x
-            # y = averagedContours[:, 1].flatten(order='C')
-
-            # x = target[:, 0,0].flatten(order='C')
-            # # print"flatenedXlength: ",len(x)
-            # # print "x: ",x
-            # y = target[:, 0,1].flatten(order='C')
-            #
-            #
-            # m,b = np.poly1d(np.polyfit(x, y, 1))
-            #ms,bs = np.poly1d(np.polyfit(xs,ys,1))
-            #print "poly: ",poly
-
-
-            # plt.plot([x], [y], 'ro')
-            # #plt.plot([xs],[ys],'bo')
-            # for i in range(min(x),max(x)):
-            #     plt.plot(i,b+m*i,'go')
-            # for i in range(min(xs),max(xs)):
-            #     plt.plot(i,bs+ms*i,'yo')
-
-
-            # i = len(x)
-            # print "x",x
-            # animated_plot.set_xdata(x[0:i])
-            # print "xindex: ",x[0:i]
-            # i = len(y)
-            # animated_plot.set_ydata(y[0:i])
-
-
-
+        no_barrel_pub.publish(filtered_map_msg_string)
 
 
         pub.publish(local_map_msg_string)
@@ -451,6 +448,8 @@ if __name__ == '__main__':
 
     croppedWidth = 640
     croppedHeight = 360
+
+    lidar = []
 
     try:
         camera_processor()
