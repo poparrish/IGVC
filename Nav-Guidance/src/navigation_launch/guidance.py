@@ -1,16 +1,18 @@
 #!/usr/bin/env python
+import math
 
 import numpy as np
 import rospy
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from nav_msgs.msg import OccupancyGrid
 from rospy.numpy_msg import numpy_msg
 from rospy_tutorials.msg import Floats
-from rx import Observable
-from std_msgs.msg import String
+from std_msgs.msg import String, Header
+from tf.transformations import quaternion_from_euler
 
 import topics
-from guidance import calculate_potential, ATTRACTOR_THRESHOLD_MM, calculate_line_angle
+from guidance import ATTRACTOR_THRESHOLD_MM, calculate_line_angle, compute_potential
 from guidance.gps_guidance import dist_to_waypoint, calculate_gps_heading
-from guidance.potential_field import partition
 from nav import rx_subscribe
 from util import Vec2d, avg, to180
 
@@ -37,14 +39,6 @@ def update_drivetrain(translation, rotation, speed):
     control.publish(np.array([translation, rotation, speed], dtype=np.float32))
 
 
-def calculate_translation(lidar, camera, goal):
-    """calculates the translation angle based on the potential field"""
-    desired_heading = calculate_potential(lidar, camera, goal)
-
-    translation = to180(desired_heading.angle)
-    return translation
-
-
 #
 # Waypoints
 #
@@ -54,11 +48,11 @@ GPS_BUFFER = 5  # buffer GPS messages to help with accuracy
 FIRST_WAYPOINT_TOLERANCE = 1  # when to start tracking the first waypoint
 WAYPOINT_TOLERANCE = .5  # precision in meters
 
-#WAYPOINTS = [
+# WAYPOINTS = [
 #    (43.600314, -116.197164),  # N/W corner of field
 #    (43.600248, -116.196955),  # center of field
 #    (43.600314, -116.197164),  # N/W corner of field
-#]
+# ]
 
 test1stwp = (42.6785268, -83.1953824)
 test2ndwp = (42.6786267, -83.1948953)
@@ -69,7 +63,6 @@ test2ndwp = (42.6786267, -83.1948953)
 # ]
 
 
-
 endof = (42.678363, -83.1945975)
 qual1 = (42.6782191223, -83.1955080989)
 qual2 = (42.6778987274, -83.1954820799)
@@ -77,12 +70,11 @@ qual2 = (42.6778987274, -83.1954820799)
 rolling_average = []
 
 WAYPOINTS = [
-endof,
+    endof,
     qual1,
     qual2,
     qual1
 ]
-
 
 northwp = [42.6790984, -83.1949250546]
 midwp = [42.6789603912, -83.1951132036]
@@ -92,6 +84,7 @@ WAYPOINTS = [
     midwp,
     southwp
 ]
+
 
 # WAYPOINTS = [
 #     southwp,
@@ -125,23 +118,22 @@ DEFAULT_STATE = {
 # }
 
 debug = None
-state_debug = rospy.Publisher('state', String, queue_size=3)
+heading_debug = rospy.Publisher(topics.POTENTIAL_FIELD, PoseStamped, queue_size=1)
 
 
 def compute_next_state(state, (nav, gps_buffer)):
     """guidance state machine"""
-    state_debug.publish(state['state'])
     # check if we need to slow down
     speed = state['speed']
-    if speed == INITIAL_SPEED:
-        clusters = partition(nav['lidar'], cluster_mm=500)
-        if len(clusters) > 0:
-            closest = min([c for c in clusters], key=lambda v: v.mag)
-        else:
-            closest = 100000000
-        if closest < INITIAL_DISTANCE_CUTOFF:
-            speed = NORMAL_SPEED
-            state['speed'] = speed
+    # if speed == INITIAL_SPEED:
+    #     clusters = partition(nav['lidar'], cluster_mm=500)
+    #     if len(clusters) > 0:
+    #         closest = min([c for c in clusters], key=lambda v: v.mag)
+    #     else:
+    #         closest = 100000000
+    #     if closest < INITIAL_DISTANCE_CUTOFF:
+    #         speed = NORMAL_SPEED
+    #         state['speed'] = speed
 
     if state['state'] == LINE_FOLLOWING:
 
@@ -179,7 +171,7 @@ def compute_next_state(state, (nav, gps_buffer)):
     return state
 
 
-def update_control((msg, state)):
+def update_control((msg, map_grid, map_pose, state)):
     """figures out what we need to do based on the current state and map"""
     camera = msg['camera']
     lidar = msg['lidar']
@@ -198,15 +190,17 @@ def update_control((msg, state)):
         rotation /= 4.0
 
     else:
+        # FIXME
         goal = calculate_gps_heading(gps, WAYPOINTS[state['tracking']])  # track the waypoint
-        
+
         rotation = to180(goal.angle)
         goal = goal.with_angle(0)  # don't need to crab for GPS waypoint, steering will handle that
         # state_debug.publish(str(goal))
 
     # calculate translation based on obstacles
-    potential = calculate_potential(lidar, camera, goal)
+    potential = compute_potential(map_pose, map_grid, goal)
     translation = to180(potential.angle)
+    print potential
 
     rospy.loginfo('translation = %s, rotation = %s, speed = %s', translation, rotation, state['speed'])
 
@@ -219,15 +213,11 @@ def update_control((msg, state)):
     rolling_average.append((translation, rotation, state['state']))
     update_drivetrain(translation, rotation, state['speed'])
 
-    # debug.publish(pickle.dumps({
-    #     'camera': camera,
-    #     'lidar': lidar,
-    #     'gps': gps,
-    #     'state': state,
-    #     'goal': goal,
-    #     'translation': translation,
-    #     'rotation': rotation
-    # }))
+    # rviz debug
+    q = quaternion_from_euler(0, 0, math.radians(potential.angle))
+    heading_debug.publish(PoseStamped(header=Header(frame_id='map'),
+                                      pose=Pose(position=Point(x=map_pose.pose.position.x, y=map_pose.pose.position.y),
+                                                orientation=Quaternion(q[0], q[1], q[2], q[3]))))
 
 
 def main():
@@ -243,18 +233,19 @@ def main():
         return not isinstance(msg['camera'], basestring)
 
     nav = rx_subscribe(topics.NAV).filter(valid_message)
-    gps = rx_subscribe(topics.GPS).buffer_with_count(GPS_BUFFER, 1)
+    map_grid = rx_subscribe(topics.MAP, OccupancyGrid, None)
+    map_pose = rx_subscribe(topics.MAP_POSE, PoseStamped, None)
+    gps = nav.map(lambda msg: msg['gps']).buffer_with_count(GPS_BUFFER, 1)
 
     # recompute state whenever nav or gps emits
-    state = Observable.combine_latest(nav, gps, lambda n, g: (n, g)) \
+    state = nav.combine_latest(gps, lambda n, g: (n, g)) \
         .scan(compute_next_state, seed=DEFAULT_STATE)
 
     # update controls whenever nav or state emits
-    Observable.combine_latest(nav, state, lambda n, g: (n, g)) \
+    map_grid.with_latest_from(nav, map_pose, state, lambda m, n, p, s: (n, m, p, s)) \
         .subscribe(update_control)
-    rate = rospy.Rate(10) # 10hz
+    rate = rospy.Rate(10)  # 10hz
     while not rospy.is_shutdown():
-
         rate.sleep()
     # rospy.spin()
 

@@ -1,9 +1,9 @@
 <launch>
-    <!--<node name="cameras" pkg="navigation_launch" type="cameras.py" />-->
-    <!--<node name="gps" pkg="navigation_launch" type="gps.py" />-->
-    <node name="guidance" pkg="navigation_launch" type="guidance.py" />
-    <node name="nav" pkg="navigation_launch" type="nav.py" />
-    <!--<node name="Control_Node" pkg="navigation_launch" type="Control_Node.py" />-->
+    <node name="cameras" pkg="navigation_launch" type="cameras.py" />
+<!--    <node name="gps" pkg="navigation_launch" type="gps.py" />-->
+    <node name="guidance" pkg="navigation_launch" type="guidance.py"  />
+    <node name="nav" pkg="navigation_launch" typerr="nav.py"  />
+    <node name="Control_Node" pkg="navigation_launch" type="Control_Node.py" />
 
 <!--
     <node pkg="rplidar_ros" type="rplidarNode" name="rplidar">
@@ -14,13 +14,12 @@
     </node>
 -->
 
-    <!--<node name="lidar" pkg="navigation_launch" type="lidar.py" output="screen" />-->
+    <node name="lidar" pkg="navigation_launch" type="lidar.py" output="screen" />
 <!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-01-27-14-47-19-lidar-odometry.bag"/>-->
-    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-02-25-17-25-50.bag"/>
+<!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-02-25-17-25-50.bag"/>-->
 <!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-03-21-18-38-07.bag"/>-->
     <node name="mapping" pkg="navigation_launch" type="mapping.py" />
 <!--    <node name="path_planner" pkg="navigation_launch" type="path_planner.py" output="screen" />-->
-    <node name="potential_field" pkg="navigation_launch" type="potential_field.py" output="screen" />
 <!--    <node name="potential_field" pkg="navigation_launch" type="navigation_launch_potential_field" />-->
 
 <!--

@@ -1,3 +1,3 @@
 from camera_guidance import calculate_line_angle, contours_to_vectors
 from gps_guidance import calculate_gps_heading
-from potential_field import calculate_potential, ATTRACTOR_THRESHOLD_MM
+from potential_field import compute_potential, ATTRACTOR_THRESHOLD_MM

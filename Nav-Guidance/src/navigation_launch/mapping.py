@@ -248,7 +248,7 @@ def start_mapping():
             .subscribe(on_next=lambda _: map.publish_lanes(),
                        on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 
-    publish_map(combined_map, lidar.combine_latest(camera, lambda l, c: l + c))
+    publish_map(combined_map, lidar.with_latest_from(camera, lambda l, c: l + c))
 
     publish_lane_map(camera_map, no_barrels_camera)
 

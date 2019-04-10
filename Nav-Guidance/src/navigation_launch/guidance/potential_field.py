@@ -1,4 +1,12 @@
-from util import Vec2d, avg
+import math
+
+import rospy
+from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import OccupancyGrid
+
+import topics
+from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
+from util import Vec2d, rx_subscribe
 
 ATTRACTOR_THRESHOLD_MM = 1500
 REPULSOR_THRESHOLD_MM = 1500
@@ -9,36 +17,12 @@ A_FACTOR = 1
 NOISE_THRESHOLD = 3
 
 
-def partition(vecs, cluster_mm):
-    """groups a list of vectors into clusters"""
-    if len(vecs) == 0:
-        return []
-
-    vecs = sorted(vecs, key=lambda v: v.angle)
-
-    prev = vecs[0]
-    group = [prev]
-    groups = []
-    for i in range(1, len(vecs)):
-        curr = vecs[i]
-        if (prev - curr).mag < cluster_mm:
-            group.append(curr)
-        else:
-            # if a cluster doesn't have at least 5 readings, we'll consider it noise
-            if len(group) > NOISE_THRESHOLD:
-                groups.append(group)
-            group = [curr]
-            prev = curr
-    groups.append(group)
-
-    return map(avg, groups)
-
-
 def calc_attractive_force(attractor, position):
     attractor -= position
 
     mag = min(attractor.mag, ATTRACTOR_THRESHOLD_MM)  # don't change scaling unless we're really close
-    f = 0.5 * A_FACTOR * mag ** 2  # quadratic
+    f = 0.5 * A_FACTOR * (attractor.mag / REPULSOR_THRESHOLD_MM) ** 2  # quadratic
+    # f = 0.5 * A_FACTOR * mag ** 2  # quadratic
     return attractor.with_magnitude(f)
 
 
@@ -52,34 +36,54 @@ def calc_repulsive_force(repulsor, position, weight):
     return repulsor.with_magnitude(f * weight)
 
 
-zero = Vec2d(0, 0)
+def trace_ray(grid, x, y, prob_threshold, angle):
+    x_inc = math.cos(math.radians(angle))
+    y_inc = math.sin(math.radians(angle))
+
+    start_x = x
+    start_y = y
+
+    data = grid.data
+    while 0 <= int(x) < MAP_SIZE_PIXELS and 0 <= int(y) < MAP_SIZE_PIXELS:
+        if data[int(x) + int(y) * MAP_SIZE_PIXELS] >= prob_threshold:
+            return math.sqrt((x - start_x) ** 2 + (y - start_y) ** 2)
+        x += x_inc
+        y += y_inc
+
+    return None
 
 
-def sum_repulsors(vecs, position, cluster_mm, weight):
-    if len(vecs) == 0:
-        return zero
+def extract_repulsors(pose, grid):
+    scale = (MAP_SIZE_PIXELS / 2.0) / (MAP_SIZE_METERS / 2.0)
+    x = int((MAP_SIZE_PIXELS / 2.0) - pose.x * scale)
+    y = int((MAP_SIZE_PIXELS / 2.0) - pose.y * scale)
 
-    clusters = partition(vecs, cluster_mm)
-    return sum([calc_repulsive_force(r, position, weight) for r in clusters])
+    repulsors = []
+    for i in xrange(360):
+        ray = trace_ray(grid, x, y, 80, i)
+        if ray is not None:
+            v = Vec2d(360 - i, ray * 1000.0 / MAP_SIZE_PIXELS * MAP_SIZE_METERS)
+            repulsors.append(v)
 
-
-def mask_lidar_in_cam(lidar_vec, cam_vec, tol):
-    to_remove = set()
-    for l_v in lidar_vec:
-        for i in xrange(len(cam_vec)):
-            c_v = cam_vec[i]
-            if (c_v.x - tol < l_v.x < c_v.x + tol) and (c_v.y - tol < l_v.y < c_v.y + tol):
-                to_remove.add(i)
-    for ind in sorted(to_remove, reverse=True):
-        del cam_vec[ind]
-    return cam_vec
+    return repulsors
 
 
-def calculate_potential(path, goal, position=zero):
-    vecs = [Vec2d.from_point(p.pose.position.x, p.pose.position.y) for p in path.poses[:10]]
-    vecs = [v.with_magnitude(1) for v in vecs]
+def compute_potential(pose_stamped, grid, goal):
+    pose = pose_stamped.pose.position
+    pose = Vec2d.from_point(pose.x, pose.y)
 
-    if len(vecs) > 0:
-        return avg(vecs)
-    else:
-        return Vec2d(0, 0)
+    repulsors = extract_repulsors(pose, grid)
+    r = sum([calc_repulsive_force(r, pose, 1) for r in repulsors])
+    return r + calc_attractive_force(goal, pose)
+
+
+def start():
+    rospy.init_node('potential_field')
+    pub = rospy.Publisher(topics.POTENTIAL_FIELD, PoseStamped, queue_size=1)
+
+    grid = rx_subscribe(topics.MAP, OccupancyGrid, parse=None)
+    pose = rx_subscribe(topics.MAP_POSE, PoseStamped, parse=None)
+    pose.with_latest_from(grid, compute_potential) \
+        .subscribe(pub.publish)
+
+    rospy.spin()
