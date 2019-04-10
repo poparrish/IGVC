@@ -202,16 +202,17 @@ def closest_contour_slope(contours):
         results.append([i,closest])
         i+=1
 
-
+    closest_contour = []
     for result in results:
         closest = 10000000
-        closest_contour = []
         if closest > result[1]:
             closest = result[1]
             closest_contour = contours[result[0]]
 
-
-    return contour_slope(closest_contour)
+    if len(closest_contour) == 0:
+        return 0
+    else:
+        return contour_slope(closest_contour)
 
 def flatten_contours(pointCloud):
     """merges contours"""
@@ -295,9 +296,9 @@ def camera_processor():
     pub = rospy.Publisher(topics.CAMERA, String, queue_size=10)
     no_barrel_pub=rospy.Publisher(topics.NO_BARREL_CAMERA,String, queue_size=10)
     global lidar
-    lidar = rx_subscribe(topics.LIDAR)
+    lidar_obs = rx_subscribe(topics.LIDAR)
 
-    Observable.combine_latest(lidar, lambda n: (n)) \
+    Observable.combine_latest(lidar_obs, lambda n: (n)) \
         .subscribe(update_lidar)
 
     rospy.init_node('camera')
