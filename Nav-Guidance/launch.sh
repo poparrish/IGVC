@@ -12,5 +12,7 @@ chmod +x src/navigation_launch/mapping.py
 chmod +x src/navigation_launch/mapping_debug.py
 chmod +x src/navigation_launch/potential_field.py
 chmod +x src/navigation_launch/Control_Node.py
+chmod +x src/navigation_launch/TeensyWrite_node.py
+chmod +x src/navigation_launch/compass_node.py
 
 roslaunch navigation_launch.launch
