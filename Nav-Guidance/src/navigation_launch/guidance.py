@@ -3,10 +3,8 @@ import math
 
 import numpy as np
 import rospy
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3
 from nav_msgs.msg import OccupancyGrid
-from rospy.numpy_msg import numpy_msg
-from rospy_tutorials.msg import Floats
 from std_msgs.msg import String, Header
 from tf.transformations import quaternion_from_euler
 
@@ -36,7 +34,8 @@ control = None
 def update_drivetrain(translation, rotation, speed):
     translation = max(-MAX_TRANSLATION, min(translation, MAX_TRANSLATION))
     rotation = max(-MAX_ROTATION, min(rotation, MAX_ROTATION))
-    control.publish(np.array([translation, rotation, speed], dtype=np.float32))
+    # speed, velocity_vector, theta_dot
+    control.publish(Vector3(x=speed, y=translation, z=rotation))
 
 
 #
@@ -199,7 +198,7 @@ def update_control((msg, map_grid, map_pose, state)):
 
     # calculate translation based on obstacles
     potential = compute_potential(map_pose, map_grid, goal)
-    translation = to180(potential.angle)
+    translation = -to180(potential.angle)
     print potential
 
     rospy.loginfo('translation = %s, rotation = %s, speed = %s', translation, rotation, state['speed'])
@@ -224,7 +223,7 @@ def main():
     global control, debug
 
     rospy.init_node(GUIDANCE_NODE)
-    control = rospy.Publisher('control', numpy_msg(Floats), queue_size=3)
+    control = rospy.Publisher('input_vectors', Vector3, queue_size=3)
     debug = rospy.Publisher('debug', String, queue_size=3)
 
     # we randomly seem to get garbage messages that are only partially unpickled
