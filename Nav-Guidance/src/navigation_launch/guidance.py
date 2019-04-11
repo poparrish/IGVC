@@ -3,14 +3,16 @@ import math
 
 import numpy as np
 import rospy
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3
-from nav_msgs.msg import OccupancyGrid
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, PoseArray
+from nav_msgs.msg import OccupancyGrid, Path
 from std_msgs.msg import String, Header
 from tf.transformations import quaternion_from_euler
 
 import topics
 from guidance import ATTRACTOR_THRESHOLD_MM, calculate_line_angle, compute_potential
+from guidance.attractor_placement import generate_path
 from guidance.gps_guidance import dist_to_waypoint, calculate_gps_heading
+from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from nav import rx_subscribe
 from util import Vec2d, avg, to180
 
@@ -118,6 +120,7 @@ DEFAULT_STATE = {
 
 debug = None
 heading_debug = rospy.Publisher(topics.POTENTIAL_FIELD, PoseStamped, queue_size=1)
+path_debug = rospy.Publisher('path_temp', Path, queue_size=1)
 
 
 def compute_next_state(state, (nav, gps_buffer)):
@@ -170,6 +173,19 @@ def compute_next_state(state, (nav, gps_buffer)):
     return state
 
 
+scale = MAP_SIZE_METERS / float(MAP_SIZE_PIXELS)
+
+
+def x_to_m(x):
+    """converts x (pixel coordinate) to world coordinate"""
+    return ((MAP_SIZE_PIXELS / -2.0) + x) * scale
+
+
+def y_to_m(y):
+    """converts y (pixel coordinate) to world coordinate"""
+    return ((MAP_SIZE_PIXELS / 2.0) - y) * scale
+
+
 def update_control((msg, map_grid, map_pose, state)):
     """figures out what we need to do based on the current state and map"""
     camera = msg['camera']
@@ -179,9 +195,24 @@ def update_control((msg, map_grid, map_pose, state)):
     #         print(v)
     gps = msg['gps']
 
+    path = generate_path(map_grid, 0)
+    if path is None:
+        path = []
+    path_debug.publish(
+        Path(header=Header(frame_id='map'),
+             poses=[PoseStamped(header=Header(frame_id='map'),
+                                pose=Pose(position=Point(x=x_to_m(p[0]),
+                                                         y=y_to_m(p[1]))))
+                    for p in path]))
+
     # calculate theta_dot based on the current state
     if state['state'] == LINE_FOLLOWING:
-        goal = Vec2d(0, ATTRACTOR_THRESHOLD_MM)  # always drive forward
+        offset = 5
+        if len(path) < offset + 1:
+            goal = Vec2d(0, 1)  # always drive forward
+        else:
+            point = path[offset]
+            goal = Vec2d.from_point(x_to_m(point[0]), y_to_m(point[1])).with_magnitude(1)
         rotation = calculate_line_angle(camera)  # rotate to follow lines
         if abs(rotation) < 10:
             rotation = 0
@@ -199,7 +230,6 @@ def update_control((msg, map_grid, map_pose, state)):
     # calculate translation based on obstacles
     potential = compute_potential(map_pose, map_grid, goal)
     translation = -to180(potential.angle)
-    print potential
 
     rospy.loginfo('translation = %s, rotation = %s, speed = %s', translation, rotation, state['speed'])
 

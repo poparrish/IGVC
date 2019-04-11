@@ -6,10 +6,10 @@ from nav_msgs.msg import OccupancyGrid
 
 import topics
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
-from util import Vec2d, rx_subscribe
+from util import Vec2d, rx_subscribe, avg
 
 ATTRACTOR_THRESHOLD_MM = 1500
-REPULSOR_THRESHOLD_MM = 1500
+REPULSOR_THRESHOLD_MM = 1000
 
 R_FACTOR = 1
 A_FACTOR = 1
@@ -74,7 +74,8 @@ def compute_potential(pose_stamped, grid, goal):
 
     repulsors = extract_repulsors(pose, grid)
     r = sum([calc_repulsive_force(r, pose, 1) for r in repulsors])
-    return r + calc_attractive_force(goal, pose)
+    r = r.with_magnitude(min(1.0, r.mag))  # cap magnitude to something reasonable
+    return r + goal
 
 
 def start():

@@ -17,7 +17,7 @@ import cv2
 import numpy as np
 import cameras
 
-MAP_SIZE_PIXELS = 100
+MAP_SIZE_PIXELS = 101
 MAP_SIZE_METERS = 5
 
 MIN_SAMPLES = 50
