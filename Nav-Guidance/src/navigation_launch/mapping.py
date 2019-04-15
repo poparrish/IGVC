@@ -2,26 +2,30 @@
 import math
 import traceback
 
+import cv2
+import numpy as np
 import rospy
+import tf
 from breezyslam.algorithms import RMHC_SLAM
 from breezyslam.sensors import Laser
-from geometry_msgs.msg import Pose, Point, PoseStamped, Quaternion
+from geometry_msgs.msg import Pose, Point, TransformStamped, Transform, Quaternion, PoseStamped
 from nav_msgs.msg import OccupancyGrid, MapMetaData
 from std_msgs.msg import Header
+from tf2_msgs.msg import TFMessage
 
+import cameras
 import topics
 from guidance import contours_to_vectors
 from lidar import ANGLE_IGNORE_WINDOW
 from util import rx_subscribe, Vec2d
-import cv2
-import numpy as np
-import cameras
+from util.rosutil import extract_tf
 
 MAP_SIZE_PIXELS = 101
 MAP_SIZE_METERS = 5
 
 MIN_SAMPLES = 50
 MAX_DIST_MM = 10000
+MAX_TRAVEL_M = 0.5  # TODO: Name
 
 UNKNOWN = 127  # unmapped/unknown value set in map
 
@@ -55,41 +59,83 @@ def pixel_to_byte(x):
     return -x * 255.0 / 127.0 + 255 if x != -1 else UNKNOWN
 
 
+def occupancy_grid_to_np(grid):
+    """Converts an OccupancyGrid to a 2-dimensional numpy array"""
+    img = np.array([pixel_to_byte(x) for x in grid.data], dtype=np.uint8)
+    return np.reshape(img, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS), order='F')
+
+
+def create_slam():
+    return RMHC_SLAM(
+        laser=Laser(scan_size=360, scan_rate_hz=5.5,
+                    detection_angle_degrees=360 - ANGLE_IGNORE_WINDOW * 2,
+                    distance_no_detection_mm=MAX_DIST_MM,
+                    detection_margin=0,
+                    offset_mm=0),
+        map_size_pixels=MAP_SIZE_PIXELS,
+        map_size_meters=MAP_SIZE_METERS,
+        hole_width_mm=500,
+        sigma_theta_degrees=0,  # disable directional prediction; we have a compass
+        sigma_xy_mm=0)
+
+
+def mm_to_pixels(mm):
+    m = MAP_SIZE_METERS / 2.0 - mm / 1000.0
+    return int(m / MAP_SIZE_METERS * MAP_SIZE_PIXELS)
+
+
 class Map:
-    def __init__(self, map_pub, pos_pub):
+    def __init__(self, map_pub, tf_frame=None):
         # Create an RMHC SLAM object with a laser model and optional robot model
-        self.slam = RMHC_SLAM(
-            laser=Laser(scan_size=360, scan_rate_hz=5.5,
-                        detection_angle_degrees=360 - ANGLE_IGNORE_WINDOW * 2,
-                        distance_no_detection_mm=MAX_DIST_MM,
-                        detection_margin=0,
-                        offset_mm=0),
-            map_size_pixels=MAP_SIZE_PIXELS,
-            map_size_meters=MAP_SIZE_METERS,
-            hole_width_mm=500,
-            sigma_theta_degrees=0,  # disable directional prediction; we have a compass
-            sigma_xy_mm=0
-        )
+        self.slam = create_slam()
         self.map_bytes = bytearray(MAP_SIZE_PIXELS * MAP_SIZE_PIXELS)
         self.map_pub = rospy.Publisher(map_pub, OccupancyGrid, queue_size=1)
-        self.pos_pub = rospy.Publisher(pos_pub, PoseStamped, queue_size=1)
+        self.tf_frame = tf_frame
+        if tf_frame is not None:
+            self.br = tf.TransformBroadcaster()
+        self.transform = TransformStamped(transform=Transform(rotation=Quaternion(0, 0, 0, 1)))
 
-    def update(self, (scan, dxy_mm, dtheta_degrees, dt_seconds)):
-        # TODO: Update position w/o updating map if scans haven't changed
-        if scan is None:
-            return
+    def zero(self):
+        """
+        Zeros the map by translating map_bytes by the distance/theta travelled so far.
 
+        https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_imgproc/py_geometric_transformations/py_geometric_transformations.html
+        """
+        img = np.reshape(self.map_bytes, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS))
+        rows, cols = img.shape
+
+        position = self.slam.position
+
+        # rotate
+        matrix = cv2.getRotationMatrix2D((cols / 2, rows / 2), position.theta_degrees, 1)
+        img = cv2.warpAffine(img, matrix, (cols, rows))
+
+        # translate
+        matrix = np.float32([[1, 0, mm_to_pixels(position.x_mm)],
+                             [0, 1, mm_to_pixels(position.y_mm)]])
+        img = cv2.warpAffine(img, matrix, (cols, rows))
+
+        # reset slam
+        self.map_bytes = bytearray(np.reshape(img, (MAP_SIZE_PIXELS ** 2)))
+        self.slam = create_slam()
+
+    def update(self, (scan, dxy_mm, dtheta_degrees, dt_seconds, new_transform)):
         # Extract distances and angles from vectors
         scan = fill_scan([v for v in scan if self.in_range(v)])
         distances = [v.mag for v in scan]
         angles = [self.skew(v.angle) for v in scan]
 
-        rospy.loginfo('Updating map, delta: %.2fmm, %.2f deg, %.2f sec', dxy_mm, dtheta_degrees,dt_seconds)
+        rospy.loginfo('Updating map, delta: %.2fmm, %.2f deg, %.2f sec', dxy_mm, dtheta_degrees, dt_seconds)
 
         self.slam.update(scans_mm=distances,
                          scan_angles_degrees=angles,
                          pose_change=(dxy_mm, dtheta_degrees, dt_seconds))
         self.slam.getmap(self.map_bytes)
+
+        if max(abs(self.transform.transform.translation.x - new_transform.transform.translation.x),
+               abs(self.transform.transform.translation.y - new_transform.transform.translation.y)) > MAX_TRAVEL_M:
+            self.zero()
+            self.transform = new_transform
 
     # TODO: Scan window should be configurable per-map
     def in_range(self, scan):
@@ -102,7 +148,11 @@ class Map:
         return self.map_bytes
 
     def get_position(self):
-        return self.slam.getpos()
+        transform = self.transform.transform
+        x, y, theta = self.slam.getpos()
+        return x / 1000.0 - MAP_SIZE_METERS / 2.0 + transform.x, \
+               y / 1000.0 - MAP_SIZE_METERS / 2.0 + transform.y, \
+               theta
 
     def publish_lanes(self):
         offset = MAP_SIZE_METERS / -2.0
@@ -184,13 +234,15 @@ class Map:
                              height=MAP_SIZE_PIXELS,
                              origin=Pose(position=Point(x=offset, y=offset))),
             data=data))
+        self.publish_pose()
 
-        # TODO: Translate map once +/- threshold from center
-        x, y, theta = self.get_position()
-
-        self.pos_pub.publish(PoseStamped(header=Header(frame_id='map'),
-                                         pose=Pose(position=Point(x=x / 1000 + offset, y=y / 1000 + offset),
-                                                   orientation=Quaternion())))
+    def publish_pose(self):
+        if self.br is not None:
+            self.br.sendTransformMessage(TransformStamped(
+                header=Header(frame_id=topics.WORLD_FRAME,
+                              stamp=rospy.Time.now()),
+                child_frame_id=topics.MAP_FRAME,
+                transform=self.transform.transform))
 
 
 def diff_state(state):
@@ -198,24 +250,27 @@ def diff_state(state):
     scan, position, time = state[1]
 
     # Calculate pose_change
-    dx_mm = (position['x'] - previous_position['x']) * 1000.0
-    dy_mm = (position['y'] - previous_position['y']) * 1000.0
+    dx_mm = (position.transform.translation.x - previous_position.transform.translation.x) * 1000.0
+    dy_mm = (position.transform.translation.y - previous_position.transform.translation.y) * 1000.0
     dxy_mm = (math.sqrt(dx_mm ** 2 + dy_mm ** 2))
-    dtheta_degrees = 0  # TODO: IMU
+    dtheta_degrees = math.degrees(position.transform.rotation.z - previous_position.transform.rotation.z)
     dt_seconds = time - previous_time
 
     # if we didn't get new readings, only update our position
     # if scan == prev_scan:
     #     scan = None
 
-    return scan, dxy_mm, dtheta_degrees, dt_seconds
+    return scan, dxy_mm, dtheta_degrees, dt_seconds, position
 
 
 def start_mapping():
     rospy.init_node('mapping')
 
-    combined_map = Map(topics.MAP, topics.MAP_POSE)
-    camera_map = Map(topics.CAMERA_MAP, topics.CAMERA_MAP_POSE)
+    odometry = rx_subscribe('/tf', TFMessage, parse=None) \
+        .let(extract_tf(topics.ODOMETRY_FRAME))
+
+    combined_map = Map(topics.MAP, topics.MAP_FRAME)
+    camera_map = Map(topics.LINE_MAP, None)
 
     lidar = rx_subscribe(topics.LIDAR) \
         .filter(lambda scan: len(scan) > MIN_SAMPLES) \
@@ -229,9 +284,6 @@ def start_mapping():
         .map(lambda msg: [v for v in msg.contours]) \
         .start_with([])
 
-    odometry = rx_subscribe(topics.ODOMETRY) \
-        .start_with({'x': 0, 'y': 0})
-
     def publish_map(map, scans):
         return scans.with_latest_from(odometry, lambda v, o: (v, o, rospy.get_rostime().to_sec())) \
             .pairwise() \
@@ -240,17 +292,17 @@ def start_mapping():
             .subscribe(on_next=lambda _: map.publish(),
                        on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 
-    def publish_lane_map(map, scans):
-        return scans.with_latest_from(odometry, lambda v, o: (v, o, rospy.get_rostime().to_sec())) \
-            .pairwise() \
-            .map(diff_state) \
-            .do_action(map.update) \
-            .subscribe(on_next=lambda _: map.publish_lanes(),
-                       on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
+    # FIXME
+    # def publish_lane_map(map, scans):
+    #     return scans.with_latest_from(odometry, lambda v, o: (v, o, rospy.get_rostime().to_sec())) \
+    #         .pairwise() \
+    #         .map(diff_state) \
+    #         .do_action(map.update) \
+    #         .subscribe(on_next=lambda _: map.publish_lanes(),
+    #                    on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
+    #     publish_lane_map(camera_map, no_barrels_camera)
 
     publish_map(combined_map, lidar.with_latest_from(camera, lambda l, c: l + c))
-
-    publish_lane_map(camera_map, no_barrels_camera)
 
     rospy.spin()
 

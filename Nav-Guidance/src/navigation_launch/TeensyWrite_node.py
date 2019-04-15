@@ -17,6 +17,7 @@ import time
 #for logging see the main loop and what to uncomment
 #currently compass data comes from an arduino publishing to the compass topic. see compass_node.py
 #odometry filters are a work in progress but those are also configurable from the main loop
+import topics
 
 ser = serial.Serial('/dev/ttyACM0', 250000,timeout=.1,writeTimeout=.1)
 Hz = 30
@@ -746,24 +747,24 @@ def start():
                                      tf.transformations.quaternion_from_euler(int(compass['orientation']), 0, 0),
                                      # (0,0,0,1),
                                      rospy.Time.now(),
-                                     "odom",
-                                     "base_link")
+                                     topics.ODOMETRY_FRAME,
+                                     topics.WORLD_FRAME)
                 else:
                     print "compass warming up"
                     br.sendTransform((fTotalY, fTotalX, 0),
                                      tf.transformations.quaternion_from_euler(0, 0, 0),
                                      # (0,0,0,1),
                                      rospy.Time.now(),
-                                     "odom",
-                                     "base_link")
+                                     topics.ODOMETRY_FRAME,
+                                     topics.WORLD_FRAME)
             else:
                 print "compass not calibrated"
                 br.sendTransform((fTotalY, fTotalX, 0),
                                  tf.transformations.quaternion_from_euler(0, 0, 0),
                                  # (0,0,0,1),
                                  rospy.Time.now(),
-                                 "odom",
-                                 "base_link")
+                                 topics.ODOMETRY_FRAME,
+                                 topics.WORLD_FRAME)
 
             #LOGGING
             # dataToLog=[]

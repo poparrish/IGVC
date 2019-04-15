@@ -34,7 +34,7 @@ def main():
         #.throttle_first(1000.0 / NAV_HZ)
 
     combined.take(1).subscribe(lambda x: rospy.loginfo('Nav starting...'))
-    combined.tap(rospy.loginfo).subscribe(lambda x: pub.publish(pickle.dumps(x)))
+    combined.subscribe(lambda x: pub.publish(pickle.dumps(x)))
 
     rospy.spin()
 

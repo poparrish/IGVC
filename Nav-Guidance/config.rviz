@@ -6,8 +6,8 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Map1
-        - /Path1
+        - /TF1/Frames1
+        - /Pose1
       Splitter Ratio: 0.5
     Tree Height: 740
   - Class: rviz/Selection
@@ -61,57 +61,6 @@ Visualization Manager:
       Use Timestamp: false
       Value: true
     - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Class: grid_map_rviz_plugin/GridMap
-      Color: 200; 200; 200
-      Color Layer: potential
-      Color Transformer: ""
-      Enabled: false
-      Height Layer: potential
-      Height Transformer: ""
-      History Length: 1
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 10
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: GridMap
-      Show Grid Lines: true
-      Topic: /grid
-      Unreliable: false
-      Use Rainbow: true
-      Value: false
-    - Alpha: 1
-      Axes Length: 0.100000001
-      Axes Radius: 0.00999999978
-      Class: rviz/Pose
-      Color: 255; 255; 255
-      Enabled: false
-      Head Length: 0.0599999987
-      Head Radius: 0.0500000007
-      Name: Pose
-      Shaft Length: 0.100000001
-      Shaft Radius: 0.0250000004
-      Shape: Arrow
-      Topic: /map_pose
-      Unreliable: false
-      Value: false
-    - Alpha: 1
-      Axes Length: 1
-      Axes Radius: 0.100000001
-      Class: rviz/Pose
-      Color: 255; 25; 0
-      Enabled: true
-      Head Length: 0.300000012
-      Head Radius: 0.100000001
-      Name: Pose
-      Shaft Length: 1
-      Shaft Radius: 0.0500000007
-      Shape: Arrow
-      Topic: /potential_field
-      Unreliable: false
-      Value: true
-    - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
       Color: 25; 255; 0
@@ -132,6 +81,45 @@ Visualization Manager:
       Shaft Diameter: 0.100000001
       Shaft Length: 0.100000001
       Topic: /path_temp
+      Unreliable: false
+      Value: true
+    - Class: rviz/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        map:
+          Value: true
+        odom:
+          Value: true
+        world:
+          Value: true
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        world:
+          map:
+            {}
+          odom:
+            {}
+      Update Interval: 0
+      Value: true
+    - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.100000001
+      Class: rviz/Pose
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.150000006
+      Head Radius: 0.0500000007
+      Name: Pose
+      Shaft Length: 0.5
+      Shaft Radius: 0.0250000004
+      Shape: Arrow
+      Topic: /potential_field
       Unreliable: false
       Value: true
   Enabled: true
@@ -159,7 +147,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 6.69941616
+      Distance: 5.13301039
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -174,10 +162,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.939796925
+      Pitch: 0.794797063
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.11819172
+      Yaw: 2.2031939
     Saved: ~
 Window Geometry:
   Displays:

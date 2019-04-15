@@ -3,18 +3,21 @@ import math
 
 import numpy as np
 import rospy
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, PoseArray
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, PoseArray, TransformStamped
 from nav_msgs.msg import OccupancyGrid, Path
+from rx import Observable
 from std_msgs.msg import String, Header
 from tf.transformations import quaternion_from_euler
+from tf2_msgs.msg import TFMessage
 
 import topics
-from guidance import ATTRACTOR_THRESHOLD_MM, calculate_line_angle, compute_potential
+from guidance import calculate_line_angle, compute_potential
 from guidance.attractor_placement import generate_path
 from guidance.gps_guidance import dist_to_waypoint, calculate_gps_heading
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from nav import rx_subscribe
 from util import Vec2d, avg, to180
+from util.rosutil import extract_tf
 
 GUIDANCE_NODE = "GUIDANCE"
 GUIDANCE_HZ = 10
@@ -23,7 +26,7 @@ GUIDANCE_HZ = 10
 # Drivetrain
 #
 
-INITIAL_SPEED = 0.5  # gotta go FAST
+INITIAL_SPEED = 1.0  # gotta go FAST
 INITIAL_DISTANCE_CUTOFF = 5000  # slow down once we're within 5m of something
 
 NORMAL_SPEED = .5  # forward speed in m/s
@@ -186,7 +189,7 @@ def y_to_m(y):
     return ((MAP_SIZE_PIXELS / 2.0) - y) * scale
 
 
-def update_control((msg, map_grid, map_pose, state)):
+def update_control((msg, map_grid, map_pose, pose, state)):
     """figures out what we need to do based on the current state and map"""
     camera = msg['camera']
     lidar = msg['lidar']
@@ -228,7 +231,10 @@ def update_control((msg, map_grid, map_pose, state)):
         # state_debug.publish(str(goal))
 
     # calculate translation based on obstacles
-    potential = compute_potential(map_pose, map_grid, goal)
+    transform = pose.transform.translation
+    map_transform = map_pose.transform.translation
+    diff = transform.x - map_transform.x, transform.y - map_transform.y
+    potential = compute_potential(diff, map_grid, goal)
     translation = -to180(potential.angle)
 
     rospy.loginfo('translation = %s, rotation = %s, speed = %s', translation, rotation, state['speed'])
@@ -245,7 +251,7 @@ def update_control((msg, map_grid, map_pose, state)):
     # rviz debug
     q = quaternion_from_euler(0, 0, math.radians(potential.angle))
     heading_debug.publish(PoseStamped(header=Header(frame_id='map'),
-                                      pose=Pose(position=Point(x=map_pose.pose.position.x, y=map_pose.pose.position.y),
+                                      pose=Pose(position=Point(x=diff[0], y=diff[1]),
                                                 orientation=Quaternion(q[0], q[1], q[2], q[3]))))
 
 
@@ -262,17 +268,38 @@ def main():
         return not isinstance(msg['camera'], basestring)
 
     nav = rx_subscribe(topics.NAV).filter(valid_message)
-    map_grid = rx_subscribe(topics.MAP, OccupancyGrid, None)
-    map_pose = rx_subscribe(topics.MAP_POSE, PoseStamped, None)
     gps = nav.map(lambda msg: msg['gps']).buffer_with_count(GPS_BUFFER, 1)
 
     # recompute state whenever nav or gps emits
     state = nav.combine_latest(gps, lambda n, g: (n, g)) \
         .scan(compute_next_state, seed=DEFAULT_STATE)
 
-    # update controls whenever nav or state emits
-    map_grid.with_latest_from(nav, map_pose, state, lambda m, n, p, s: (n, m, p, s)) \
+    # update controls whenever position or state emits
+    tf = rx_subscribe('/tf', TFMessage, parse=None)
+
+    def pr(msg):
+        print 'frames %s' % [t.child_frame_id for t in msg.transforms]
+
+    tf.subscribe(pr)
+
+    map_tf = tf.let(extract_tf(topics.MAP_FRAME))
+
+    def latest_map_tf(occupancy_grid):
+        return map_tf \
+            .filter(lambda t: t.header.stamp > occupancy_grid.header.stamp) \
+            .first() \
+            .map(lambda t: (occupancy_grid, t))
+
+    map_with_pos = rx_subscribe(topics.MAP, OccupancyGrid, None) \
+        .throttle_first(1000) \
+        .switch_map(latest_map_tf)
+
+    pos = tf.let(extract_tf(topics.ODOMETRY_FRAME))
+
+    pos.combine_latest(state, lambda o, s: (o, s)) \
+        .with_latest_from(nav, map_with_pos, lambda (o, s), n, (m, mp): (n, m, mp, o, s)) \
         .subscribe(update_control)
+
     rate = rospy.Rate(10)  # 10hz
     while not rospy.is_shutdown():
         rate.sleep()

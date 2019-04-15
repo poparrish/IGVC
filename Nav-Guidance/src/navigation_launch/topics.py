@@ -1,8 +1,5 @@
 MAP = 'map'
-MAP_POSE = 'map_pose'
-CAMERA_MAP = 'camera_map'
-CAMERA_MAP_POSE = 'camera_map_pose'
-
+LINE_MAP = 'line_map'
 
 POTENTIAL_FIELD = 'potential_field'
 PATH = 'path'
@@ -11,5 +8,9 @@ NAV = 'nav'
 LIDAR = 'scans'
 GPS = 'gps'
 CAMERA = 'camera'
-NO_BARREL_CAMERA='no_barrel_camera'
+NO_BARREL_CAMERA = 'no_barrel_camera'
 ODOMETRY = 'ODOMETRY'
+
+MAP_FRAME = 'map'
+ODOMETRY_FRAME = 'odom'
+WORLD_FRAME = 'world'
