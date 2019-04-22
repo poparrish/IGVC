@@ -18,7 +18,7 @@ import time
 #currently compass data comes from an arduino publishing to the compass topic. see compass_node.py
 #odometry filters are a work in progress but those are also configurable from the main loop
 
-ser = serial.Serial('/dev/teensy', 250000,timeout=.1,writeTimeout=.1)
+ser = serial.Serial('/dev/ttyACM0', 250000,timeout=.1,writeTimeout=.1)
 Hz = 30
 LENGTH = .66675
 WIDTH = .6223
@@ -37,7 +37,7 @@ psi3 = -45
 
 loggingMatrix=[]
 
-def calcWheel(speed, velocity_vector, theta_dot, wheel_psi, pointTurnAngle, pointTurnDir):
+def calcWheel(speed, velocity_vector, theta_dot, wheel_psi, pointTurnAngle, pointTurnDir,angles_only):
     """
     this is the method that actually does the calculations. this takes desired vectors and outputs data for the
     individual wheels. nearly identical to the writeup that Dr. Swanson produced.
@@ -51,6 +51,7 @@ def calcWheel(speed, velocity_vector, theta_dot, wheel_psi, pointTurnAngle, poin
     global steering_state
     theta_dot_rad = theta_dot * 0.0174533
     rot_speed = math.fabs(theta_dot_rad) * RADIUS
+
     if math.fabs(speed) < 0.05:
         if math.fabs(rot_speed) > .001:#point rotation
             steering_state["point_turn"]=True
@@ -65,6 +66,8 @@ def calcWheel(speed, velocity_vector, theta_dot, wheel_psi, pointTurnAngle, poin
                 wheel_speed *= pointTurnDir
             else:
                 wheel_speed *= pointTurnDir
+            if angles_only:
+                wheel_speed=0
             wheelString = str('B' + str(wheel_theta) + 'S' + str(wheel_speed*-1))
             #wheelString = str('B0' + 'S0')
             return wheelString
@@ -87,6 +90,8 @@ def calcWheel(speed, velocity_vector, theta_dot, wheel_psi, pointTurnAngle, poin
             wheel_theta = velocity_vector
             #wheel_speed = speed / 0.0085922
             wheel_speed = speed / 0.0106395  # for yes orange tread
+            if angles_only:
+                wheel_speed=0
             wheelString = str('B' + str(wheel_theta) + 'S' + str(wheel_speed*-1))
             return wheelString
         else:
@@ -122,8 +127,10 @@ def calcWheel(speed, velocity_vector, theta_dot, wheel_psi, pointTurnAngle, poin
             #wheel_speed = wheel_speed / 0.0085922  # for no orange tread
             wheel_speed = wheel_speed / 0.0106395  # for yes orange tread
             wheel_theta = wheel_theta * 57.2958
+            if angles_only:
+                wheel_speed=0
             wheelString = str('B' + str(int(wheel_theta)) + 'S' + str(int(wheel_speed*-1)))
-            print "wheelString: ",wheelString
+            #print "wheelString: ",wheelString
             return wheelString
 
 # def getLatestData(numDataSlots):#without dict return type used for
@@ -266,14 +273,37 @@ def rpm_to_mps(current_RPM):
         2: float(0),
         3: float(0)
     }
+
     for i in range(0,4):
         current_RPM_list.append(current_RPM[i])
     for i in range(0,4):
         current_mps[i]=(current_RPM_list[i]*0.638048)/60
     return current_mps
 
+def invert(angle,range):
+    return range-angle
 
-def calculate_delta_odometry(deltaMetersTraveled,currentAngle,current_RPM):
+def convert_360_to_180(compass):
+    if compass > 179:
+        modified_compass = compass
+        print 'modified_comp: ',modified_compass
+        modified_compass=invert(modified_compass,360)
+    else:
+        modified_compass=compass*-1
+    return modified_compass
+
+def wrap_pos_neg_180(VelocityVector):
+    normalized_angle=VelocityVector
+    if VelocityVector > 180:#make neg
+        normalized_angle=360-VelocityVector
+    if VelocityVector < -180:#make pos
+        normalized_angle = 360-VelocityVector
+    if VelocityVector == -180:
+        print '3'
+        normalized_angle=180
+    return normalized_angle
+
+def calculate_delta_odometry(deltaMetersTraveled,currentAngle):
     """
     Better for us to just track deltas in our pose rather than try to build the tf here. It will be easier to identify
     trends in what particular maneuvers will make these readings more or less reliable from higher up in the control law.
@@ -283,37 +313,121 @@ def calculate_delta_odometry(deltaMetersTraveled,currentAngle,current_RPM):
     :return: should return change in x,y position (meters) and orientation(degrees) from a 0,0 starting position
     """
     global steering_state
+    global compass_home
+    global compass
+    print 'compass',compass
+    imu_angle=convert_360_to_180(compass['orientation'])
+    print "imu_angle: ",imu_angle
+
     xtranslationComponent=0.0#meters
     ytranslationComponent=0.0#meters
     VelocityVector=0.0#radians
-    avgDeltaMetersTraveled=0.0#meters
-    if steering_state["point_turn"] == True:
-        print "undefined_odom_state"
-    elif steering_state["translation"] == True:#this also includes driving straight since we're translating straight
-        avgDeltaMetersTraveled=(deltaMetersTraveled[0]+deltaMetersTraveled[1]+deltaMetersTraveled[2]+deltaMetersTraveled[3])/4
-        VelocityVector=(currentAngle[0]+currentAngle[1]+currentAngle[2]+currentAngle[3])/4
-        VelocityVector=np.deg2rad(VelocityVector)
-        xtranslationComponent=math.sin(VelocityVector)*avgDeltaMetersTraveled
-        ytranslationComponent=math.cos(VelocityVector)*avgDeltaMetersTraveled
-        print "translation"
-    elif steering_state["regular_turn"] == True:
-        #Idea here is to assume that translation is along the 0 degree line. This imaginary line is going to be tangent
-        #to the circle traced by our turn radius. Knowing that, we can draw a triangle that represents the start+end point
-        #of deltaMetersTraveled with the base being along the imaginary line and the angle between the base, center origin
-        #point of Bender, and the hypotenuse which will be the actual distance traveled
-        #average the angle of the first and second "axles" just find the mirror reflection after translation is subtracted out
-        avgAngleFirstAxle=(currentAngle[0]+currentAngle[3])/2
-        avgAngleSecondAxle=(currentAngle[1]+currentAngle[2])/2
-        #again assume we are driving straight so just average them and ignore error
-        avgTangentAngle=(avgAngleFirstAxle+avgAngleSecondAxle)/2
-        avgTangentAngle=np.deg2rad(avgTangentAngle)
-        xtranslationComponent = math.sin(VelocityVector) * avgDeltaMetersTraveled
-        ytranslationComponent = math.cos(VelocityVector) * avgDeltaMetersTraveled
-        print "regular_turn"
-    elif steering_state["translation_and_rotation"] == True:
-        print "undefined_odom_state"
-    else:#not moving
-        print "not_moving"
+    avgDeltaMetersTraveled = (deltaMetersTraveled[0] + deltaMetersTraveled[1] + deltaMetersTraveled[2] +
+                              deltaMetersTraveled[3]) / 4
+
+    VelocityVector = (currentAngle[0] + currentAngle[1] + currentAngle[2] + currentAngle[3]) / 4
+
+    # rotation_speed = {
+    #     0: float(0),
+    #     1: float(0),
+    #     2: float(0),
+    #     3: float(0)
+    # }
+    # ground_speed = {
+    #     0: float(0),
+    #     1: float(0),
+    #     2: float(0),
+    #     3: float(0)
+    # }
+    # wheel_psi = {
+    #     0: float(45),
+    #     1: float(135),
+    #     2: float(-135),
+    #     3: float(-45)
+    # }
+    # sup_angle = {
+    #     0: float(0),
+    #     1: float(0),
+    #     2: float(0),
+    #     3: float(0)
+    # }
+    # delta_theta = {
+    #     0: float(0),
+    #     1: float(0),
+    #     2: float(0),
+    #     3: float(0)
+    # }
+    # current_MPS = {
+    #     0: float(0),
+    #     1: float(0),
+    #     2: float(0),
+    #     3: float(0)
+    # }
+    #
+    # for i in range(0,4):
+    #     current_MPS[i] = deltaMetersTraveled[i]*30
+    # print "current MPS: ",current_MPS
+    #
+    # for i in range(0,4):
+    #     rotation_speed[i]=VelocityVector-currentAngle[i]
+    #
+    # for i in range(0,4):
+    #     if (rotation_speed[i] < 0):
+    #         angle_vv_rot = wheel_psi[i] - VelocityVector - 90
+    #     else:
+    #         angle_vv_rot = wheel_psi[i] - VelocityVector + 90
+    #     sup_angle[i] = 180 - angle_vv_rot
+    #
+    #     if (sup_angle[i] > 180):
+    #         sup_angle[i] = sup_angle[i] - 360
+    #     if (sup_angle[i] < -180):
+    #         sup_angle[i] = sup_angle[i] + 360
+    #
+    #     if current_MPS[i] == 0:
+    #         delta_theta[i] = 0
+    #     else:
+    #         delta_theta[i] = math.asin((math.sin(np.deg2rad(sup_angle[i])) * rotation_speed[i]) / current_MPS[i])
+    #
+    #
+    # for i in range(0,4):
+    #     ground_speed[i]= rotation_speed[i]*rotation_speed[i]+current_MPS[i]*current_MPS[i]-2*rotation_speed[i]*current_MPS[i]*math.cos(np.deg2rad(180-delta_theta[i]+sup_angle[i]))
+
+    #normalize tranlsation vector
+    VelocityVector+=imu_angle
+    print "Velocity_Vector, ",VelocityVector
+    imu_frame_VelocityVector=wrap_pos_neg_180(VelocityVector)
+    xtranslationComponent = math.sin(np.deg2rad(imu_frame_VelocityVector)) * avgDeltaMetersTraveled
+    ytranslationComponent = math.cos(np.deg2rad(imu_frame_VelocityVector)) * avgDeltaMetersTraveled
+
+
+    # print "GROUND SPEED: ",ground_speed
+    # print "VELOCITYVECTOR: ",VelocityVector
+    # if steering_state["point_turn"] == True:
+    #     print "undefined_odom_state"
+    # elif steering_state["translation"] == True:#this also includes driving straight since we're translating straight
+    #     VelocityVector=(currentAngle[0]+currentAngle[1]+currentAngle[2]+currentAngle[3])/4
+    #     VelocityVector=np.deg2rad(VelocityVector)
+    #     xtranslationComponent=math.sin(VelocityVector)*avgDeltaMetersTraveled
+    #     ytranslationComponent=math.cos(VelocityVector)*avgDeltaMetersTraveled
+    #     print "translation"
+    # elif steering_state["regular_turn"] == True:
+    #     #Idea here is to assume that translation is along the 0 degree line. This imaginary line is going to be tangent
+    #     #to the circle traced by our turn radius. Knowing that, we can draw a triangle that represents the start+end point
+    #     #of deltaMetersTraveled with the base being along the imaginary line and the angle between the base, center origin
+    #     #point of Bender, and the hypotenuse which will be the actual distance traveled
+    #     #average the angle of the first and second "axles" just find the mirror reflection after translation is subtracted out
+    #     avgAngleFirstAxle=(currentAngle[0]+currentAngle[3])/2
+    #     avgAngleSecondAxle=(currentAngle[1]+currentAngle[2])/2
+    #     #again assume we are driving straight so just average them and ignore error
+    #     avgTangentAngle=(avgAngleFirstAxle+avgAngleSecondAxle)/2
+    #     avgTangentAngle=np.deg2rad(avgTangentAngle)
+    #     xtranslationComponent = math.sin(VelocityVector) * avgDeltaMetersTraveled
+    #     ytranslationComponent = math.cos(VelocityVector) * avgDeltaMetersTraveled
+    #     print "regular_turn"
+    # elif steering_state["translation_and_rotation"] == True:
+    #     print "undefined_odom_state"
+    # else:#not moving
+    #     print "not_moving"
     return xtranslationComponent,ytranslationComponent
 
 def vector_callback(vector):
@@ -343,7 +457,19 @@ def compass_callback(data):
         'is_alive': data.z  # 0 if dead 1 if transmitting
     }
 
-def write_to_Teensy(speed,velocity_vector,theta_dot):
+def map_init_orientation_callback(data):
+    """
+    :param data:
+    :return:
+    """
+    global map_calibration_status
+    map_calibration_status = {
+        'toggle_init': data.x,  # if this is set to 1 compass_home will set equal to imu current angle
+        'nothing': data.y,  # probably nothing
+        'nothing': data.z  # same
+    }
+
+def write_to_Teensy(speed,velocity_vector,theta_dot,angles_only):
     """
     this runs everytime the ROS subscriber is updated.Between 15 and 30 hz should be sufficient This writes data to the teensy, and tracks
     for over wrapping on the wheels to avoid twisted wires.
@@ -361,10 +487,16 @@ def write_to_Teensy(speed,velocity_vector,theta_dot):
     pointTurnDir3 = 1
 
     # write to teensy
-    ser.write(str('W0' + calcWheel(speed, velocity_vector, theta_dot, psi0, pointTurnAngle0, pointTurnDir0) + '\n'))
-    ser.write(str('W1' + calcWheel(speed, velocity_vector, theta_dot, psi1, pointTurnAngle1, pointTurnDir1) + '\n'))
-    ser.write(str('W2' + calcWheel(speed, velocity_vector, theta_dot, psi2, pointTurnAngle2, pointTurnDir2) + '\n'))
-    ser.write(str('W3' + calcWheel(speed, velocity_vector, theta_dot, psi3, pointTurnAngle3, pointTurnDir3) + '\n'))
+    if angles_only == False:
+        ser.write(str('W0' + calcWheel(speed, velocity_vector, theta_dot, psi0, pointTurnAngle0, pointTurnDir0,angles_only) + '\n'))
+        ser.write(str('W1' + calcWheel(speed, velocity_vector, theta_dot, psi1, pointTurnAngle1, pointTurnDir1,angles_only) + '\n'))
+        ser.write(str('W2' + calcWheel(speed, velocity_vector, theta_dot, psi2, pointTurnAngle2, pointTurnDir2,angles_only) + '\n'))
+        ser.write(str('W3' + calcWheel(speed, velocity_vector, theta_dot, psi3, pointTurnAngle3, pointTurnDir3,angles_only) + '\n'))
+    else:
+        ser.write(str('W0' + calcWheel(speed, velocity_vector, theta_dot, psi0, pointTurnAngle0, pointTurnDir0,angles_only) + '\n'))
+        ser.write(str('W1' + calcWheel(speed, velocity_vector, theta_dot, psi1, pointTurnAngle1, pointTurnDir1,angles_only) + '\n'))
+        ser.write(str('W2' + calcWheel(speed, velocity_vector, theta_dot, psi2, pointTurnAngle2, pointTurnDir2,angles_only) + '\n'))
+        ser.write(str('W3' + calcWheel(speed, velocity_vector, theta_dot, psi3, pointTurnAngle3, pointTurnDir3,angles_only) + '\n'))
     ser.reset_input_buffer()
 
 def box_car_filter(train,filteredRPM, boxSize):
@@ -450,8 +582,10 @@ def idle_noise_filter(currentRPM,desiredRPM):
         3: float(0)
     }
     for i in range(0,4):
-        if currentRPM[i] > 0 and desiredRPM[i] == 0:#we are moving but want to be stationary. assume this is idle noise
+        if (currentRPM[i] > 0 and desiredRPM[i] == 0) or steering_state["point_turn"]==True:#we are moving but want to be stationary. assume this is idle noise
             idleFilteredRPM[i] = 0
+        else:
+            idleFilteredRPM[i] = currentRPM[i]
 
     return idleFilteredRPM
 
@@ -471,11 +605,15 @@ def start():
     #logging
     global count
     global loggingMatrix
+    global compass_home
+
+
     start = time.time()
 
     #ROS inits
     rospy.Subscriber("input_vectors", Vector3, vector_callback)
     rospy.Subscriber("orientation", Vector3,compass_callback)
+    rospy.Subscriber("map_orientation",Vector3,map_init_orientation_callback)
     rospy.init_node('TeensyWrite_node')
     rate = rospy.Rate(hz=Hz)
     br = tf.TransformBroadcaster()
@@ -512,11 +650,17 @@ def start():
                  "TeensyTimeMicroSeconds"])
 
     lastTrain = []
+
+    compass_calibrated = False
+    compass_home = 0
+
     while not rospy.is_shutdown():
         try:
             #READ/WRITE data to Teensy
             desired_angle, currentAngle, current_RPM, desired_RPM, speedCheck, deltaTics,deltaAngle,deltaHubRPM,teensyTime = getLatestData()
-            write_to_Teensy(vectors['speed'],vectors['velocity_vector'],vectors['theta_dot'])
+            write_to_Teensy(vectors['speed'],vectors['velocity_vector'],vectors['theta_dot'],angles_only=False)
+            #write_to_Teensy(vectors['speed'],vectors['velocity_vector'],vectors['theta_dot'])
+
             # write_to_Teensy(.7,0,0)
 
             # for i in metersTraveled.items():
@@ -525,8 +669,8 @@ def start():
             #     print "desired_angle", i
             # for i in currentAngle.items():
             #     print "currentAngle", i
-            for i in current_RPM.items():
-                print "currentRPM", i
+            # for i in current_RPM.items():
+            #     print "currentRPM", i
             # for i in desired_RPM.items():
             #     print "desiredRPM", i
             # for i in speedCheck.items():
@@ -548,10 +692,12 @@ def start():
             #idleFilteredRPM = idle_noise_filter(current_RPM,desired_RPM)
             filtered_RPM,lastGoodRPM,lastGoodRPMcount = best_delta_RPM(current_RPM,lastGoodRPM,maxDelta,lastGoodRPMcount,maxNull)
             smoothed_RPM,train = box_car_filter(lastTrain,filtered_RPM,boxSize=6)
+            idleFilteredRPM = idle_noise_filter(smoothed_RPM,desired_RPM)
 
-            print "smoothed",smoothed_RPM
+
+            print "idle_filtered",idleFilteredRPM
             #ODOMETRY from filter
-            current_MPS=rpm_to_mps(smoothed_RPM)
+            current_MPS=rpm_to_mps(idleFilteredRPM)
             #NOTE: for some reason when we set lastMetersTraveled as a dict it will be mutated in the below for each loop
             #however, setting lastMetersTraveled to a list (as it is currently implemented) fixes that. Unsure as to why this
             #fixes the problem or what exactly the problem is. Just remember that metersTraveled is dict (tuples) and
@@ -564,9 +710,17 @@ def start():
                 2: metersTraveled[2] - lastMetersTraveled[2],
                 3: metersTraveled[3] - lastMetersTraveled[3]
             }
-            xChange, yChange = calculate_delta_odometry(deltaMetersTraveled, currentAngle, smoothed_RPM)
+            global compass_home
+            print "compass_home: ",compass_home
+            print 'compass: ',compass['orientation']
+
+            xChange,yChange = 0,0
+            xChange, yChange = calculate_delta_odometry(deltaMetersTraveled, currentAngle)
+
+
             for i in range(0,4):
                 lastMetersTraveled[i]=metersTraveled[i]
+
             totalX += xChange
             totalY += yChange
             totalMetersTraveled += (deltaMetersTraveled[0] + deltaMetersTraveled[1] + deltaMetersTraveled[2] +
@@ -580,6 +734,10 @@ def start():
             #TF broadcaster
 
             if compass['calibration_status'] == 3.0:
+                if compass_calibrated == False and map_calibration_status['toggle_init']==1:
+                    compass_calibrated = True
+
+                    compass_home = compass['orientation']
                 if compass['is_alive'] == 1:
                     br.sendTransform((fTotalY, fTotalX, 0),
                                      tf.transformations.quaternion_from_euler(int(compass['orientation']), 0, 0),
@@ -652,7 +810,8 @@ def start():
             #         writer.writerow(cols)
             #     sys.exit()#kills session
         except Exception as e:
-            print "no data from teensy %s" %e
+            pass
+            #print "no data from teensy %s" %e
         rate.sleep()
         loopCount+=1
     rospy.spin()
