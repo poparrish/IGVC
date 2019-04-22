@@ -734,10 +734,13 @@ def start():
             #TF broadcaster
 
             if compass['calibration_status'] == 3.0:
-                if compass_calibrated == False and map_calibration_status['toggle_init']==1:
-                    compass_calibrated = True
+                if compass_calibrated == False:
+                    if map_calibration_status['toggle_init']==1:
+                        compass_calibrated = True
 
-                    compass_home = compass['orientation']
+                        compass_home = compass['orientation']
+                    else:
+                        print "Waiting for [1,0,0] on map_calibration_status topic"
                 if compass['is_alive'] == 1:
                     br.sendTransform((fTotalY, fTotalX, 0),
                                      tf.transformations.quaternion_from_euler(int(compass['orientation']), 0, 0),
@@ -837,6 +840,13 @@ if __name__ == '__main__':
         'orientation': 0,
         'calibration_status': 0,  # 0 is not calibrated 1 is calibrated
         'is_alive': 0  # 0 if dead 1 if transmitting
+    }
+
+    global map_calibration_status
+    map_calibration_status = {
+        'toggle_init': 0,  # if this is set to 1 compass_home will set equal to imu current angle
+        'nothing': 0,  # probably nothing
+        'nothing': 0 # same
     }
 
     #logging
