@@ -223,12 +223,12 @@ def update_control((msg, map_grid, map_pose, pose, state)):
 
     # calculate theta_dot based on the current state
     if state['state'] == LINE_FOLLOWING:
-        offset = 5
+        offset = 2
         if len(path) < offset + 1:
             goal = Vec2d(0, 1)  # always drive forward
         else:
             point = path[offset]
-            goal = Vec2d.from_point(x_to_m(point[0]), y_to_m(point[1])).with_magnitude(1)
+            goal = Vec2d.from_point(x_to_m(point[0] + 0.5), y_to_m(point[1] + 0.5)).with_magnitude(1)
         rotation = calculate_line_angle(camera)  # rotate to follow lines
         if abs(rotation) < 10:
             rotation = 0
@@ -246,7 +246,7 @@ def update_control((msg, map_grid, map_pose, pose, state)):
     # calculate translation based on obstacles
 
     potential = compute_potential(diff, map_grid, goal)
-    translation = -to180(potential.angle)
+    translation = to180(potential.angle)
 
     rospy.loginfo('translation = %s, rotation = %s, speed = %s', translation, rotation, state['speed'])
 
@@ -260,7 +260,7 @@ def update_control((msg, map_grid, map_pose, pose, state)):
     update_drivetrain(translation, rotation, state['speed'])
 
     # rviz debug
-    q = quaternion_from_euler(0, 0, math.radians(potential.angle))
+    q = quaternion_from_euler(0, 0, math.radians(translation))
     heading_debug.publish(PoseStamped(header=Header(frame_id='map'),
                                       pose=Pose(position=Point(x=diff[0], y=diff[1]),
                                                 orientation=Quaternion(q[0], q[1], q[2], q[3]))))
@@ -286,7 +286,7 @@ def main():
         .scan(compute_next_state, seed=DEFAULT_STATE)
 
     # update controls whenever position or state emits
-    tf = rx_subscribe('/tf', TFMessage, parse=None)
+    tf = rx_subscribe('/tf', TFMessage, parse=None, buffer_size=10)
 
     map_tf = tf.let(extract_tf(topics.MAP_FRAME))
 
@@ -298,6 +298,11 @@ def main():
 
     map_with_pos = rx_subscribe(topics.MAP, OccupancyGrid, None) \
         .switch_map(latest_map_tf)
+
+    def pr2(msg):
+        print 'map updating'
+
+    map_with_pos.subscribe(pr2)
 
     pos = tf.let(extract_tf(topics.ODOMETRY_FRAME))
 

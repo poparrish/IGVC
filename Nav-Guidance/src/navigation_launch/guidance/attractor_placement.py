@@ -49,15 +49,20 @@ def build_costmap(grid):
     img = np.rot90(img)
 
     # make area immediately around robot traversable
+    i = 5
     center = MAP_SIZE_PIXELS / 2
     img = np.ascontiguousarray(img, dtype=np.uint8)
-    cv2.rectangle(img, (center - dilation, center - dilation), (center + dilation, center + dilation), (255), -1)
+    cv2.rectangle(img, (center - i, center - i), (center + i, center + i), (255), -1)
 
     return img
 
 
-def m_to_pixel(m):
+def x_to_pixel(m):
     return int(m / MAP_SIZE_METERS * MAP_SIZE_PIXELS + MAP_SIZE_PIXELS / 2.0)
+
+
+def y_to_pixel(m):
+    return int(-m / MAP_SIZE_METERS * MAP_SIZE_PIXELS + MAP_SIZE_PIXELS / 2.0)
 
 
 def generate_path(grid, heading, (x, y)):
@@ -79,8 +84,8 @@ def generate_path(grid, heading, (x, y)):
 
         return 1
 
-    x = int(round(m_to_pixel(x) / float(SPACING))) * SPACING
-    y = int(round(m_to_pixel(y) / float(SPACING))) * SPACING
+    x = int(round(x_to_pixel(x) / float(SPACING))) * SPACING
+    y = int(round(y_to_pixel(y) / float(SPACING))) * SPACING
 
     center = MAP_SIZE_PIXELS / 2
     path = find_path(start=(x, y),

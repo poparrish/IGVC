@@ -469,11 +469,11 @@ if __name__ == '__main__':
     ilowV = 0
     ihighV = 210
 
-    ilowH = 0
-    ihighH = 76
-    ilowS = 66
+    ilowH = 39
+    ihighH = 86
+    ilowS = 27
     ihighS = 156
-    ilowV = 131
+    ilowV = 93
     ihighV = 255
 
     #poolnoodle

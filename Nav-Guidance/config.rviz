@@ -8,9 +8,6 @@ Panels:
         - /Status1
         - /Path1
         - /TF1/Frames1
-        - /Pose1
-        - /Image1
-        - /Image1/Status1
       Splitter Ratio: 0.5
     Tree Height: 534
   - Class: rviz/Selection
@@ -66,13 +63,13 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
-      Color: 25; 255; 0
+      Color: 0; 0; 0
       Enabled: true
       Head Diameter: 0.300000012
       Head Length: 0.200000003
       Length: 0.300000012
       Line Style: Lines
-      Line Width: 0.0299999993
+      Line Width: 0.0900000036
       Name: Path
       Offset:
         X: 0
@@ -162,7 +159,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.13301039
+      Distance: 7.47742891
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -177,10 +174,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.52479732
+      Pitch: 1.07979679
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.39819384
+      Yaw: 4.56821299
     Saved: ~
 Window Geometry:
   Displays:

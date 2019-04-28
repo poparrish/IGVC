@@ -17,13 +17,8 @@ ANGLE_IGNORE_WINDOW = 45  # ignore readings +/- this angle behind Bender
 
 
 def create_vector((quality, angle, dist)):
-    # valid_angle = ANGLE_IGNORE_WINDOW < angle < 360 - ANGLE_IGNORE_WINDOW
-    # valid_distance = MIN_DIST_MM < dist
-
-    v = Vec2d(angle, dist)
-    # v = v.from_point(v.x - LIDAR_OFFSET_MM, v.y)
-
-    return v
+    angle = -angle + 360  # invert lidar
+    return Vec2d(angle, dist)
 
 
 def convert_scan_to_vectors(scan):

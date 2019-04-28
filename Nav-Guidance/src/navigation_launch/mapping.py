@@ -48,7 +48,7 @@ def fill_scan(scan):
         else:
             nearest[angle] = v
 
-    return scan
+    return nearest.values()
 
 
 # TODO: Naming
