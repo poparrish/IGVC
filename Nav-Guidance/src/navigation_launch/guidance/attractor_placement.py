@@ -9,11 +9,13 @@ import math
 
 import cv2
 import numpy as np
-from mapping import MAP_SIZE_PIXELS, pixel_to_byte, pixel_to_grid
-from a_star import find_path, grid_neighbors, grid_traversable
+
+from a_star import find_path, grid_neighbors
+from mapping import MAP_SIZE_PIXELS, pixel_to_byte, MAP_SIZE_METERS
 from util import Vec2d
 
-SPACING = 5
+SPACING = 2
+COSTMAP_DILATION_M = 0.5  # closest distance to obstacles pathfinding is allowed to get
 CIRCLE_RADIUS = math.sqrt(2 * MAP_SIZE_PIXELS ** 2)
 
 
@@ -35,22 +37,30 @@ def navigable_edge_point((x, y), heading):
 def build_costmap(grid):
     img = np.array([pixel_to_byte(x) for x in grid.data], dtype=np.uint8)
 
-    # # dilate obstacles
     img = np.reshape(img, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS), order='F')
     ret, img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
     img = cv2.bitwise_not(img)
 
-    kernel = np.ones((8, 8), np.uint8)
+    # dilate obstacles
+    dilation = int(float(COSTMAP_DILATION_M) / MAP_SIZE_METERS * MAP_SIZE_PIXELS)
+    kernel = np.ones((dilation, dilation), np.uint8)
     img = cv2.dilate(img, kernel, iterations=1)
     img = cv2.bitwise_not(img)
     img = np.rot90(img)
-    # cv2.imshow('test', img)
-    # cv2.waitKey(3)
+
+    # make area immediately around robot traversable
+    center = MAP_SIZE_PIXELS / 2
+    img = np.ascontiguousarray(img, dtype=np.uint8)
+    cv2.rectangle(img, (center - dilation, center - dilation), (center + dilation, center + dilation), (255), -1)
 
     return img
 
 
-def generate_path(grid, heading):
+def m_to_pixel(m):
+    return int(m / MAP_SIZE_METERS * MAP_SIZE_PIXELS + MAP_SIZE_PIXELS / 2.0)
+
+
+def generate_path(grid, heading, (x, y)):
     costmap = build_costmap(grid)
     valid_edges = set([e for e in edge_point() if navigable_edge_point(e, heading)])
 
@@ -69,10 +79,13 @@ def generate_path(grid, heading):
 
         return 1
 
+    x = int(round(m_to_pixel(x) / float(SPACING))) * SPACING
+    y = int(round(m_to_pixel(y) / float(SPACING))) * SPACING
+
     center = MAP_SIZE_PIXELS / 2
-    path = find_path(start=(center, center),
+    path = find_path(start=(x, y),
                      reached_goal=is_goal,
                      neighbors=grid_neighbors(costmap, jump_size=SPACING),
                      weight=weight)
 
-    return path
+    return costmap, path

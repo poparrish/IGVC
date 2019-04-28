@@ -107,13 +107,3 @@ def grid_neighbors(grid, jump_size=1):
             yield (x, y + jump_size)
 
     return neighbors
-
-
-def grid_traversable(grid, traversable):
-    return lambda ((x, y)): traversable(grid[y][x])
-
-
-def find_path_grid(grid, start, goal, traversable, heuristic=manhattan):
-    return find_path(start, goal, grid_neighbors(grid),
-                     traversable=lambda (x, y): traversable(grid[y][x]),
-                     heuristic=heuristic)

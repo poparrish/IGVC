@@ -94,11 +94,11 @@ def extract_repulsors(pose, grid):
 def compute_potential((x, y), grid, goal):
     pose = Vec2d.from_point(x, y)
 
-    repulsors = extract_repulsors(pose, grid)
-    r = sum_repulsors(repulsors, pose, cluster_mm=150, weight=2)
-    r = r.with_magnitude(min(1.0, r.mag))  # cap magnitude to something reasonable
-    return r + goal
-
+    # repulsors = extract_repulsors(pose, grid)
+    # r = sum_repulsors(repulsors, pose, cluster_mm=150, weight=2)
+    # r = r.with_magnitude(min(1.0, r.mag))  # cap magnitude to something reasonable
+    # return r + goal
+    return goal
 
 def start():
     rospy.init_node('potential_field')

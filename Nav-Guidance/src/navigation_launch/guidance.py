@@ -3,9 +3,11 @@ import math
 
 import numpy as np
 import rospy
+from cv_bridge import CvBridge
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, PoseArray, TransformStamped
 from nav_msgs.msg import OccupancyGrid, Path
 from rx import Observable
+from sensor_msgs.msg import Image
 from std_msgs.msg import String, Header
 from tf.transformations import quaternion_from_euler
 from tf2_msgs.msg import TFMessage
@@ -123,7 +125,9 @@ DEFAULT_STATE = {
 
 debug = None
 heading_debug = rospy.Publisher(topics.POTENTIAL_FIELD, PoseStamped, queue_size=1)
-path_debug = rospy.Publisher('path_temp', Path, queue_size=1)
+costmap_debug = rospy.Publisher('guidance/costmap', Image, queue_size=1)
+path_debug = rospy.Publisher('guidance/path', Path, queue_size=1)
+bridge = CvBridge()
 
 
 def compute_next_state(state, (nav, gps_buffer)):
@@ -198,7 +202,16 @@ def update_control((msg, map_grid, map_pose, pose, state)):
     #         print(v)
     gps = msg['gps']
 
-    path = generate_path(map_grid, 0)
+    transform = pose.transform.translation
+    map_transform = map_pose.transform.translation
+    diff = transform.x - map_transform.x, transform.y - map_transform.y
+
+    rotation = pose.transform.rotation.z
+    map_rotation = map_pose.transform.rotation.z
+    diff_rotation = math.degrees(rotation - map_rotation)
+
+    costmap, path = generate_path(map_grid, diff_rotation, diff)
+    costmap_debug.publish(bridge.cv2_to_imgmsg(costmap, 'mono8'))
     if path is None:
         path = []
     path_debug.publish(
@@ -231,9 +244,7 @@ def update_control((msg, map_grid, map_pose, pose, state)):
         # state_debug.publish(str(goal))
 
     # calculate translation based on obstacles
-    transform = pose.transform.translation
-    map_transform = map_pose.transform.translation
-    diff = transform.x - map_transform.x, transform.y - map_transform.y
+
     potential = compute_potential(diff, map_grid, goal)
     translation = -to180(potential.angle)
 
@@ -250,7 +261,6 @@ def update_control((msg, map_grid, map_pose, pose, state)):
 
     # rviz debug
     q = quaternion_from_euler(0, 0, math.radians(potential.angle))
-    print 'updating...'
     heading_debug.publish(PoseStamped(header=Header(frame_id='map'),
                                       pose=Pose(position=Point(x=diff[0], y=diff[1]),
                                                 orientation=Quaternion(q[0], q[1], q[2], q[3]))))
@@ -278,15 +288,11 @@ def main():
     # update controls whenever position or state emits
     tf = rx_subscribe('/tf', TFMessage, parse=None)
 
-    def pr(msg):
-        print 'frames %s' % [t.child_frame_id for t in msg.transforms]
-
-    tf.subscribe(pr)
-
-    map_tf = tf.let(extract_tf(topics.MAP_FRAME)).replay(1)
+    map_tf = tf.let(extract_tf(topics.MAP_FRAME))
 
     def latest_map_tf(occupancy_grid):
         return map_tf \
+            .filter(lambda t: t.header.stamp >= occupancy_grid.header.stamp) \
             .first() \
             .map(lambda t: (occupancy_grid, t))
 

@@ -25,11 +25,11 @@ MAP_SIZE_METERS = 5
 
 MIN_SAMPLES = 50
 MAX_DIST_MM = 10000
-MAX_TRAVEL_M = 1 # TODO: Name
+MAX_TRAVEL_M = 0.5  # TODO: Name
 
 UNKNOWN = 127  # unmapped/unknown value set in map
 
-
+# TODO: This is flawed, breaks gap filling
 def fill_scan(scan):
     nearest = {}
 
@@ -50,6 +50,8 @@ def fill_scan(scan):
 
     return scan
 
+
+# TODO: Naming
 def pixel_to_grid(x):
     return (255 - x) / 255.0 * 127.0 if x != UNKNOWN else -1
 
@@ -291,6 +293,7 @@ def start_mapping():
             .pairwise() \
             .map(diff_state) \
             .do_action(map.update) \
+            .do_action(lambda _: map.publish_pose()) \
             .subscribe(on_next=lambda _: map.publish(),
                        on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 
