@@ -25,7 +25,7 @@ MAP_SIZE_METERS = 5
 
 MIN_SAMPLES = 50
 MAX_DIST_MM = 10000
-MAX_TRAVEL_M = 0.5  # TODO: Name
+MAX_TRAVEL_M = 1 # TODO: Name
 
 UNKNOWN = 127  # unmapped/unknown value set in map
 
@@ -48,8 +48,7 @@ def fill_scan(scan):
         else:
             nearest[angle] = v
 
-    return nearest.values()
-
+    return scan
 
 def pixel_to_grid(x):
     return (255 - x) / 255.0 * 127.0 if x != UNKNOWN else -1
@@ -106,14 +105,17 @@ class Map:
 
         position = self.slam.position
 
+        border_mode = cv2.BORDER_CONSTANT
+        border_value = (UNKNOWN)
+
         # rotate
         matrix = cv2.getRotationMatrix2D((cols / 2, rows / 2), position.theta_degrees, 1)
-        img = cv2.warpAffine(img, matrix, (cols, rows))
+        img = cv2.warpAffine(img, matrix, (cols, rows), borderMode=border_mode, borderValue=border_value)
 
         # translate
         matrix = np.float32([[1, 0, mm_to_pixels(position.x_mm)],
                              [0, 1, mm_to_pixels(position.y_mm)]])
-        img = cv2.warpAffine(img, matrix, (cols, rows))
+        img = cv2.warpAffine(img, matrix, (cols, rows), borderMode=border_mode, borderValue=border_value)
 
         # reset slam
         self.map_bytes = bytearray(np.reshape(img, (MAP_SIZE_PIXELS ** 2)))

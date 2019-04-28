@@ -250,6 +250,7 @@ def update_control((msg, map_grid, map_pose, pose, state)):
 
     # rviz debug
     q = quaternion_from_euler(0, 0, math.radians(potential.angle))
+    print 'updating...'
     heading_debug.publish(PoseStamped(header=Header(frame_id='map'),
                                       pose=Pose(position=Point(x=diff[0], y=diff[1]),
                                                 orientation=Quaternion(q[0], q[1], q[2], q[3]))))
@@ -282,16 +283,14 @@ def main():
 
     tf.subscribe(pr)
 
-    map_tf = tf.let(extract_tf(topics.MAP_FRAME))
+    map_tf = tf.let(extract_tf(topics.MAP_FRAME)).replay(1)
 
     def latest_map_tf(occupancy_grid):
         return map_tf \
-            .filter(lambda t: t.header.stamp > occupancy_grid.header.stamp) \
             .first() \
             .map(lambda t: (occupancy_grid, t))
 
     map_with_pos = rx_subscribe(topics.MAP, OccupancyGrid, None) \
-        .throttle_first(1000) \
         .switch_map(latest_map_tf)
 
     pos = tf.let(extract_tf(topics.ODOMETRY_FRAME))

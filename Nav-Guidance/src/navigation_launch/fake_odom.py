@@ -13,12 +13,12 @@ def start():
     while not rospy.is_shutdown():
         br.sendTransform(
             translation=(0.5 + i, 1, 0),
-            rotation=quaternion_from_euler(0, 0, i*3),
+            rotation=quaternion_from_euler(0, 0, i),
             time=rospy.Time.now(),
             child=topics.ODOMETRY_FRAME,
             parent=topics.WORLD_FRAME
         )
-        i += .01
+        i += .044
         # br.sendTransform(
         #     translation=(1.5 + i * 2, 1, 0),
         #     rotation=quaternion_from_euler(0, 0, 1),
