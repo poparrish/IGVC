@@ -11,6 +11,7 @@ from breezyslam.algorithms import RMHC_SLAM
 from breezyslam.sensors import Laser
 from geometry_msgs.msg import Pose, Point, TransformStamped, Transform, Quaternion, PoseStamped
 from nav_msgs.msg import OccupancyGrid, MapMetaData
+from rx import Observable
 from std_msgs.msg import Header, String
 from tf2_msgs.msg import TFMessage
 
@@ -34,24 +35,26 @@ UNKNOWN = 127  # unmapped/unknown value set in map
 
 # TODO: This is flawed, breaks gap filling
 def fill_scan(scan):
-    nearest = {}
+    nearest = []
 
     # make sure to provide a reading for all angles, otherwise Breezy
     # will try to fill in the gaps
     for x in xrange(0, 360):
-        nearest[x] = Vec2d(x, MAX_DIST_MM)
+        nearest.append(None)
 
     for v in scan:
         angle = int(v.angle)
 
         if angle in nearest:
             old = nearest[angle]
-            if old.mag > v.mag:
+            if old is None or old.mag > v.mag:
                 nearest[angle] = v
         else:
             nearest[angle] = v
 
-    return nearest.values()
+    nearest[0] = Vec2d(0, MAX_DIST_MM)
+    nearest[359] = Vec2d(359, MAX_DIST_MM)
+    return [n for n in nearest if n is not None]
 
 
 # TODO: Naming
@@ -238,8 +241,7 @@ class Map:
 
     def publish_pose(self):
         if self.br is not None:
-            # self.br.sendTransformMessage(self.transform_stamped())
-            pass
+            self.br.sendTransformMessage(self.transform_stamped())
 
     def transform_stamped(self):
         return TransformStamped(
@@ -293,9 +295,7 @@ def start_mapping():
     combined_map = Map(topics.MAP, topics.MAP_FRAME)
     camera_map = Map(topics.LINE_MAP, None)
 
-    lidar = rx_subscribe(topics.LIDAR) \
-        .filter(lambda scan: len(scan) > MIN_SAMPLES) \
-        .start_with([])
+    lidar = Observable.of([])
 
     camera = rx_subscribe(topics.CAMERA) \
         .map(lambda msg: [v for contour in (contours_to_vectors(msg.contours)) for v in contour]) \
@@ -309,6 +309,7 @@ def start_mapping():
         return scans.with_latest_from(odometry, lambda v, o: (v, o, rospy.get_rostime().to_sec())) \
             .pairwise() \
             .map(diff_state) \
+            .throttle_last(200) \
             .do_action(map.update) \
             .do_action(lambda _: map.publish_pose()) \
             .subscribe(on_next=lambda _: map.publish(),
@@ -324,7 +325,7 @@ def start_mapping():
     #                    on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
     #     publish_lane_map(camera_map, no_barrels_camera)
 
-    publish_map(combined_map, lidar.with_latest_from(camera, lambda l, c: l + c))
+    publish_map(combined_map, camera.with_latest_from(lidar, lambda c, l: l + c))
 
     rospy.spin()
 

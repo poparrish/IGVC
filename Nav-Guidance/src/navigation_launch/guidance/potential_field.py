@@ -84,7 +84,7 @@ def extract_repulsors(pose, grid):
     for i in xrange(360):
         ray = trace_ray(grid, x, y, 80, i)
         if ray is not None:
-            v = Vec2d(i, ray * 1000.0 / MAP_SIZE_PIXELS * MAP_SIZE_METERS)
+            v = Vec2d(180-i, ray * 1000.0 / MAP_SIZE_PIXELS * MAP_SIZE_METERS)
             repulsors.append(v)
 
     return repulsors
@@ -94,7 +94,7 @@ def compute_potential((x, y), grid, goal):
     pose = Vec2d.from_point(x, y)
 
     repulsors = extract_repulsors(pose, grid)
-    r = sum_repulsors(repulsors, pose, cluster_mm=250, weight=2)
+    r = sum_repulsors(repulsors, pose, cluster_mm=150, weight=2)
     r = r.with_magnitude(min(1.0, r.mag))  # cap magnitude to something reasonable
     return r + goal
 

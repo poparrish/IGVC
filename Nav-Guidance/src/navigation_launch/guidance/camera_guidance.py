@@ -26,7 +26,7 @@ def point_to_vector(p):
     #y*=-1
     x*=-1
     v = Vec2d.from_point(x, y)
-    return v.with_angle(v.angle - 270)
+    return v.with_angle(270-v.angle )
 
 
 def contours_to_vectors(contours):
