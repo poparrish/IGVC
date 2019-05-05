@@ -16,6 +16,7 @@ import topics
 from guidance import calculate_line_angle, compute_potential
 from guidance.attractor_placement import generate_path
 from guidance.gps_guidance import dist_to_waypoint, calculate_gps_heading
+from map_msg import MapData
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from nav import rx_subscribe
 from util import Vec2d, avg, to180
@@ -205,6 +206,8 @@ def update_control((msg, map_grid, map_pose, pose, state)):
     transform = pose.transform.translation
     map_transform = map_pose.transform.translation
     diff = transform.x - map_transform.x, transform.y - map_transform.y
+    print map_transform.x, map_transform.y
+    print transform.x, transform.y
 
     rotation = pose.transform.rotation.z
     map_rotation = map_pose.transform.rotation.z
@@ -286,34 +289,19 @@ def main():
         .scan(compute_next_state, seed=DEFAULT_STATE)
 
     # update controls whenever position or state emits
-    tf = rx_subscribe('/tf', TFMessage, parse=None, buffer_size=10)
+    tf = rx_subscribe('/tf', TFMessage, parse=None, buffer_size=100)
 
-    map_tf = tf.let(extract_tf(topics.MAP_FRAME))
+    # only update map at 1hz to help with noise
+    map_with_pos = rx_subscribe(topics.MAP, String).throttle_last(1000)
 
-    def latest_map_tf(occupancy_grid):
-        return map_tf \
-            .filter(lambda t: t.header.stamp >= occupancy_grid.header.stamp) \
-            .first() \
-            .map(lambda t: (occupancy_grid, t))
-
-    map_with_pos = rx_subscribe(topics.MAP, OccupancyGrid, None) \
-        .switch_map(latest_map_tf)
-
-    def pr2(msg):
-        print 'map updating'
-
-    map_with_pos.subscribe(pr2)
-
-    pos = tf.let(extract_tf(topics.ODOMETRY_FRAME))
+    # cap update rate to 10Hz, otherwise guidance will fall behind
+    pos = tf.let(extract_tf(topics.ODOMETRY_FRAME)).throttle_last(100)
 
     pos.combine_latest(state, lambda o, s: (o, s)) \
-        .with_latest_from(nav, map_with_pos, lambda (o, s), n, (m, mp): (n, m, mp, o, s)) \
+        .with_latest_from(nav, map_with_pos, lambda (o, s), n, m: (n, m.map_bytes, m.transform, o, s)) \
         .subscribe(update_control)
 
-    rate = rospy.Rate(10)  # 10hz
-    while not rospy.is_shutdown():
-        rate.sleep()
-    # rospy.spin()
+    rospy.spin()
 
 
 if __name__ == '__main__':

@@ -35,25 +35,14 @@ def navigable_edge_point((x, y), heading):
 
 
 def build_costmap(grid):
-    img = np.array([pixel_to_byte(x) for x in grid.data], dtype=np.uint8)
-
-    img = np.reshape(img, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS), order='F')
-    ret, img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
-    img = cv2.bitwise_not(img)
-
     # dilate obstacles
     dilation = int(float(COSTMAP_DILATION_M) / MAP_SIZE_METERS * MAP_SIZE_PIXELS)
     kernel = np.ones((dilation, dilation), np.uint8)
+    img = cv2.bitwise_not(grid)
     img = cv2.dilate(img, kernel, iterations=1)
     img = cv2.bitwise_not(img)
-    img = np.rot90(img)
 
-    # make area immediately around robot traversable
-    i = 5
-    center = MAP_SIZE_PIXELS / 2
-    img = np.ascontiguousarray(img, dtype=np.uint8)
-    cv2.rectangle(img, (center - i, center - i), (center + i, center + i), (255), -1)
-
+    ret, img = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)
     return img
 
 

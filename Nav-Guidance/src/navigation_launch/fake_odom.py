@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import rospy
 import tf
 from tf.transformations import quaternion_from_euler

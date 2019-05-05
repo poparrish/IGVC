@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import math
+import pickle
 import traceback
 
 import cv2
@@ -10,13 +11,14 @@ from breezyslam.algorithms import RMHC_SLAM
 from breezyslam.sensors import Laser
 from geometry_msgs.msg import Pose, Point, TransformStamped, Transform, Quaternion, PoseStamped
 from nav_msgs.msg import OccupancyGrid, MapMetaData
-from std_msgs.msg import Header
+from std_msgs.msg import Header, String
 from tf2_msgs.msg import TFMessage
 
 import cameras
 import topics
 from guidance import contours_to_vectors
 from lidar import ANGLE_IGNORE_WINDOW
+from map_msg import MapData
 from util import rx_subscribe, Vec2d
 from util.rosutil import extract_tf
 
@@ -28,6 +30,7 @@ MAX_DIST_MM = 10000
 MAX_TRAVEL_M = 0.5  # TODO: Name
 
 UNKNOWN = 127  # unmapped/unknown value set in map
+
 
 # TODO: This is flawed, breaks gap filling
 def fill_scan(scan):
@@ -90,7 +93,8 @@ class Map:
         # Create an RMHC SLAM object with a laser model and optional robot model
         self.slam = create_slam()
         self.map_bytes = bytearray(MAP_SIZE_PIXELS * MAP_SIZE_PIXELS)
-        self.map_pub = rospy.Publisher(map_pub, OccupancyGrid, queue_size=1)
+        self.rviz_pub = rospy.Publisher(map_pub + '_rviz', OccupancyGrid, queue_size=1)
+        self.map_pub = rospy.Publisher(map_pub, String, queue_size=1)
         self.tf_frame = tf_frame
         if tf_frame is not None:
             self.br = tf.TransformBroadcaster()
@@ -228,25 +232,38 @@ class Map:
                                                    orientation=Quaternion())))
 
     def publish(self):
-        offset = MAP_SIZE_METERS / -2.0
-
-        data = [pixel_to_grid(x) for x in self.map_bytes]
-
-        self.map_pub.publish(OccupancyGrid(
-            info=MapMetaData(resolution=float(MAP_SIZE_METERS) / MAP_SIZE_PIXELS,
-                             width=MAP_SIZE_PIXELS,
-                             height=MAP_SIZE_PIXELS,
-                             origin=Pose(position=Point(x=offset, y=offset))),
-            data=data))
+        self.rviz_pub.publish(self.to_occupancy_grid())
+        self.map_pub.publish(pickle.dumps(self.to_message()))
         self.publish_pose()
 
     def publish_pose(self):
         if self.br is not None:
-            self.br.sendTransformMessage(TransformStamped(
-                header=Header(frame_id=topics.WORLD_FRAME,
-                              stamp=rospy.Time.now()),
-                child_frame_id=topics.MAP_FRAME,
-                transform=self.transform.transform))
+            # self.br.sendTransformMessage(self.transform_stamped())
+            pass
+
+    def transform_stamped(self):
+        return TransformStamped(
+            header=Header(frame_id=topics.WORLD_FRAME,
+                          stamp=rospy.Time.now()),
+            child_frame_id=topics.MAP_FRAME,
+            transform=self.transform.transform)
+
+    def to_message(self):
+        img = np.array([b if b != UNKNOWN else 255 for b in self.map_bytes], dtype=np.uint8)
+        img = np.reshape(img, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS), order='F')
+        img = np.rot90(img)
+
+        return MapData(transform=self.transform_stamped(),
+                       map_data=img)
+
+    def to_occupancy_grid(self):
+        offset = MAP_SIZE_METERS / -2.0
+        return OccupancyGrid(
+            info=MapMetaData(resolution=float(MAP_SIZE_METERS) / MAP_SIZE_PIXELS,
+                             width=MAP_SIZE_PIXELS,
+                             height=MAP_SIZE_PIXELS,
+                             origin=Pose(position=Point(x=offset, y=offset))),
+            data=[pixel_to_grid(x) for x in self.map_bytes])
 
 
 def diff_state(state):
