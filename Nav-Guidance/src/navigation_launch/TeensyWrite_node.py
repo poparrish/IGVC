@@ -7,6 +7,7 @@ from std_msgs.msg import String
 import tf
 from tf.transformations import euler_from_quaternion,quaternion_from_euler
 from geometry_msgs.msg import Vector3
+from std_msgs.msg import String, Int32
 import csv
 import sys
 import time
@@ -19,7 +20,7 @@ import time
 #odometry filters are a work in progress but those are also configurable from the main loop
 import topics
 
-ser = serial.Serial('/dev/ttyACM0', 250000,timeout=.1,writeTimeout=.1)
+ser = serial.Serial('/dev/teensy', 250000,timeout=.1,writeTimeout=.1)
 Hz = 30
 LENGTH = .66675
 WIDTH = .6223
@@ -317,7 +318,7 @@ def calculate_delta_odometry(deltaMetersTraveled,currentAngle):
     global compass_home
     global compass
     print 'compass',compass
-    imu_angle=convert_360_to_180(compass['orientation'])
+    imu_angle=convert_360_to_180(compass['heading'])
     print "imu_angle: ",imu_angle
 
     xtranslationComponent=0.0#meters
@@ -445,7 +446,7 @@ def vector_callback(vector):
         'theta_dot': vector.z  # rate of rotation
     }
 
-def compass_callback(data):
+def compass_callback(heading):
     """
     stores arduino compass data in a global dict
     :param data: Vector3
@@ -453,22 +454,10 @@ def compass_callback(data):
     """
     global compass
     compass = {
-        'orientation': data.x,
-        'calibration_status': data.y,  # 0 is not calibrated 1 is calibrated
-        'is_alive': data.z  # 0 if dead 1 if transmitting
+        'heading': heading.data
     }
 
-def map_init_orientation_callback(data):
-    """
-    :param data:
-    :return:
-    """
-    global map_calibration_status
-    map_calibration_status = {
-        'toggle_init': data.x,  # if this is set to 1 compass_home will set equal to imu current angle
-        'nothing': data.y,  # probably nothing
-        'nothing': data.z  # same
-    }
+
 
 def write_to_Teensy(speed,velocity_vector,theta_dot,angles_only):
     """
@@ -613,8 +602,8 @@ def start():
 
     #ROS inits
     rospy.Subscriber("input_vectors", Vector3, vector_callback)
-    rospy.Subscriber("orientation", Vector3,compass_callback)
-    rospy.Subscriber("map_orientation",Vector3,map_init_orientation_callback)
+    rospy.Subscriber(topics.ORIENTATION, Int32,compass_callback)
+    # rospy.Subscriber("map_orientation",Vector3,map_init_orientation_callback)
     rospy.init_node('TeensyWrite_node')
     rate = rospy.Rate(hz=Hz)
     br = tf.TransformBroadcaster()
@@ -713,7 +702,7 @@ def start():
             }
             global compass_home
             print "compass_home: ",compass_home
-            print 'compass: ',compass['orientation']
+            print 'compass: ',compass['heading']
 
             xChange,yChange = 0,0
             xChange, yChange = calculate_delta_odometry(deltaMetersTraveled, currentAngle)
@@ -734,37 +723,53 @@ def start():
             print "fTotalY: ",fTotalY
             #TF broadcaster
 
-            if compass['calibration_status'] == 3.0:
-                if compass_calibrated == False:
-                    if map_calibration_status['toggle_init']==1:
-                        compass_calibrated = True
 
-                        compass_home = compass['orientation']
-                    else:
-                        print "Waiting for [1,0,0] on map_calibration_status topic"
-                if compass['is_alive'] == 1:
-                    br.sendTransform((fTotalY, fTotalX, 0),
-                                     tf.transformations.quaternion_from_euler(int(compass['orientation']), 0, 0),
-                                     # (0,0,0,1),
-                                     rospy.Time.now(),
-                                     topics.ODOMETRY_FRAME,
-                                     topics.WORLD_FRAME)
-                else:
-                    print "compass warming up"
-                    br.sendTransform((fTotalY, fTotalX, 0),
-                                     tf.transformations.quaternion_from_euler(0, 0, 0),
-                                     # (0,0,0,1),
-                                     rospy.Time.now(),
-                                     topics.ODOMETRY_FRAME,
-                                     topics.WORLD_FRAME)
-            else:
-                print "compass not calibrated"
+
+            if compass['heading'] !=0 and compass_calibrated==False:#first pass, relies on 0 init
+                compass_calibrated = True
+                compass_home = compass['heading']
+            elif compass_calibrated == True:
                 br.sendTransform((fTotalY, fTotalX, 0),
-                                 tf.transformations.quaternion_from_euler(0, 0, 0),
+                                 tf.transformations.quaternion_from_euler(int(compass['heading']), 0, 0),
                                  # (0,0,0,1),
                                  rospy.Time.now(),
                                  topics.ODOMETRY_FRAME,
                                  topics.WORLD_FRAME)
+            else:
+                rospy.loginfo('Compass warming up...')
+
+
+            # if compass['calibration_status'] == 3.0:
+            #     if compass_calibrated == False:
+            #         if map_calibration_status['toggle_init']==1:
+            #             compass_calibrated = True
+            #
+            #             compass_home = compass['orientation']
+            #         else:
+            #             print "Waiting for [1,0,0] on map_calibration_status topic"
+            #     if compass['is_alive'] == 1:
+            #         br.sendTransform((fTotalY, fTotalX, 0),
+            #                          tf.transformations.quaternion_from_euler(int(compass['orientation']), 0, 0),
+            #                          # (0,0,0,1),
+            #                          rospy.Time.now(),
+            #                          topics.ODOMETRY_FRAME,
+            #                          topics.WORLD_FRAME)
+            #     else:
+            #         print "compass warming up"
+            #         br.sendTransform((fTotalY, fTotalX, 0),
+            #                          tf.transformations.quaternion_from_euler(0, 0, 0),
+            #                          # (0,0,0,1),
+            #                          rospy.Time.now(),
+            #                          topics.ODOMETRY_FRAME,
+            #                          topics.WORLD_FRAME)
+            # else:
+            #     print "compass not calibrated"
+            #     br.sendTransform((fTotalY, fTotalX, 0),
+            #                      tf.transformations.quaternion_from_euler(0, 0, 0),
+            #                      # (0,0,0,1),
+            #                      rospy.Time.now(),
+            #                      topics.ODOMETRY_FRAME,
+            #                      topics.WORLD_FRAME)
 
             #LOGGING
             # dataToLog=[]
@@ -836,19 +841,12 @@ if __name__ == '__main__':
         "point_turn": False,
         "no_turn": True
     }
-    global compass #data from arduino compass. set in compassCallback
+    global compass #data from pixhawk
     compass = {
-        'orientation': 0,
-        'calibration_status': 0,  # 0 is not calibrated 1 is calibrated
-        'is_alive': 0  # 0 if dead 1 if transmitting
+        'heading': 0
     }
 
-    global map_calibration_status
-    map_calibration_status = {
-        'toggle_init': 0,  # if this is set to 1 compass_home will set equal to imu current angle
-        'nothing': 0,  # probably nothing
-        'nothing': 0 # same
-    }
+
 
     #logging
     matrix = []

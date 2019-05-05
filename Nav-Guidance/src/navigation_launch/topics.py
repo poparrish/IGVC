@@ -10,6 +10,7 @@ GPS = 'gps'
 CAMERA = 'camera'
 NO_BARREL_CAMERA = 'no_barrel_camera'
 ODOMETRY = 'ODOMETRY'
+ORIENTATION='orientation'
 
 MAP_FRAME = 'map'
 ODOMETRY_FRAME = 'odom'
