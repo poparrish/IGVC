@@ -213,25 +213,25 @@ def update_control((msg, map_grid, map_pose, pose, state)):
     map_rotation = map_pose.transform.rotation.z
     diff_rotation = math.degrees(rotation - map_rotation)
 
-    # costmap, path = generate_path(map_grid, diff_rotation, diff)
-    # costmap_debug.publish(bridge.cv2_to_imgmsg(costmap, 'mono8'))
-    # if path is None:
-    #     path = []
-    # path_debug.publish(
-    #     Path(header=Header(frame_id='map'),
-    #          poses=[PoseStamped(header=Header(frame_id='map'),
-    #                             pose=Pose(position=Point(x=x_to_m(p[0]),
-    #                                                      y=y_to_m(p[1]))))
-    #                 for p in path]))
+    costmap, path = generate_path(map_grid, diff_rotation, diff)
+    costmap_debug.publish(bridge.cv2_to_imgmsg(costmap, 'mono8'))
+    if path is None:
+        path = []
+    path_debug.publish(
+        Path(header=Header(frame_id='map'),
+             poses=[PoseStamped(header=Header(frame_id='map'),
+                                pose=Pose(position=Point(x=x_to_m(p[0]),
+                                                         y=y_to_m(p[1]))))
+                    for p in path]))
 
     # calculate theta_dot based on the current state
     if state['state'] == LINE_FOLLOWING:
         offset = 2
-        # if len(path) < offset + 1:
-        goal = Vec2d(0, 1)  # always drive forward
-        # else:
-        #     point = path[offset]
-        #     goal = Vec2d.from_point(x_to_m(point[0] + 0.5), y_to_m(point[1] + 0.5)).with_magnitude(1)
+        if len(path) < offset + 1:
+            goal = Vec2d(0, 1)  # always drive forward
+        else:
+            point = path[offset]
+            goal = Vec2d.from_point(x_to_m(point[0] + 0.5), y_to_m(point[1] + 0.5)).with_magnitude(1)
         rotation = calculate_line_angle(camera)  # rotate to follow lines
         if abs(rotation) < 10:
             rotation = 0

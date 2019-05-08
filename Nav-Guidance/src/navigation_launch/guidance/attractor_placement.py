@@ -15,7 +15,7 @@ from mapping import MAP_SIZE_PIXELS, pixel_to_byte, MAP_SIZE_METERS
 from util import Vec2d
 
 SPACING = 2
-COSTMAP_DILATION_M = 0.5  # closest distance to obstacles pathfinding is allowed to get
+COSTMAP_DILATION_M = 0.8  # closest distance to obstacles pathfinding is allowed to get
 CIRCLE_RADIUS = math.sqrt(2 * MAP_SIZE_PIXELS ** 2)
 
 

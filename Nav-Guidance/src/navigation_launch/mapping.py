@@ -11,7 +11,6 @@ from breezyslam.algorithms import RMHC_SLAM
 from breezyslam.sensors import Laser
 from geometry_msgs.msg import Pose, Point, TransformStamped, Transform, Quaternion, PoseStamped
 from nav_msgs.msg import OccupancyGrid, MapMetaData
-from rx import Observable
 from std_msgs.msg import Header, String
 from tf2_msgs.msg import TFMessage
 
@@ -33,14 +32,14 @@ MAX_TRAVEL_M = 0.5  # TODO: Name
 UNKNOWN = 127  # unmapped/unknown value set in map
 
 
-# TODO: This is flawed, breaks gap filling
-def fill_scan(scan):
+def fill_scan(scan, max=False):
     nearest = []
 
-    # make sure to provide a reading for all angles, otherwise Breezy
-    # will try to fill in the gaps
     for x in xrange(0, 360):
-        nearest.append(None)
+        if max:
+            nearest.append(Vec2d(x, MAX_DIST_MM))
+        else:
+            nearest.append(None)
 
     for v in scan:
         angle = int(v.angle)
@@ -72,10 +71,10 @@ def occupancy_grid_to_np(grid):
     return np.reshape(img, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS), order='F')
 
 
-def create_slam():
+def create_slam(angle_ignore_window):
     return RMHC_SLAM(
         laser=Laser(scan_size=360, scan_rate_hz=5.5,
-                    detection_angle_degrees=360 - ANGLE_IGNORE_WINDOW * 2,
+                    detection_angle_degrees=360 - angle_ignore_window * 2,
                     distance_no_detection_mm=MAX_DIST_MM,
                     detection_margin=0,
                     offset_mm=0),
@@ -92,9 +91,9 @@ def mm_to_pixels(mm):
 
 
 class Map:
-    def __init__(self, map_pub, tf_frame=None):
+    def __init__(self, map_pub, angle_ignore_window, tf_frame=None):
         # Create an RMHC SLAM object with a laser model and optional robot model
-        self.slam = create_slam()
+        self.slam = create_slam(angle_ignore_window)
         self.map_bytes = bytearray(MAP_SIZE_PIXELS * MAP_SIZE_PIXELS)
         self.rviz_pub = rospy.Publisher(map_pub + '_rviz', OccupancyGrid, queue_size=1)
         self.map_pub = rospy.Publisher(map_pub, String, queue_size=1)
@@ -102,6 +101,7 @@ class Map:
         if tf_frame is not None:
             self.br = tf.TransformBroadcaster()
         self.transform = TransformStamped(transform=Transform(rotation=Quaternion(0, 0, 0, 1)))
+        self.angle_ignore_window = angle_ignore_window
 
     def zero(self):
         """
@@ -128,11 +128,11 @@ class Map:
 
         # reset slam
         self.map_bytes = bytearray(np.reshape(img, (MAP_SIZE_PIXELS ** 2)))
-        self.slam = create_slam()
+        self.slam = create_slam(self.angle_ignore_window)
 
     def update(self, (scan, dxy_mm, dtheta_degrees, dt_seconds, new_transform)):
         # Extract distances and angles from vectors
-        scan = fill_scan([v for v in scan if self.in_range(v)])
+        scan = [v for v in scan if self.in_range(v)]
         distances = [v.mag for v in scan]
         angles = [self.skew(v.angle) for v in scan]
 
@@ -150,10 +150,10 @@ class Map:
 
     # TODO: Scan window should be configurable per-map
     def in_range(self, scan):
-        return ANGLE_IGNORE_WINDOW < scan.angle < 360 - ANGLE_IGNORE_WINDOW
+        return self.angle_ignore_window < scan.angle < 360 - self.angle_ignore_window
 
     def skew(self, angle):
-        return (angle - ANGLE_IGNORE_WINDOW) * 180 / (180 - ANGLE_IGNORE_WINDOW)
+        return (angle - self.angle_ignore_window) * 180 / (180 - self.angle_ignore_window)
 
     def get_bytes(self):
         return self.map_bytes
@@ -165,7 +165,45 @@ class Map:
                y / 1000.0 - MAP_SIZE_METERS / 2.0 + transform.y, \
                theta
 
-    def publish_lanes(self):
+    def publish(self):
+        self.rviz_pub.publish(self.to_occupancy_grid())
+        self.map_pub.publish(pickle.dumps(self.to_message()))
+        self.publish_pose()
+
+    def publish_pose(self):
+        if hasattr(self, 'br'):
+            self.br.sendTransformMessage(self.transform_stamped())
+
+    def transform_stamped(self):
+        return TransformStamped(
+            header=Header(frame_id=topics.WORLD_FRAME,
+                          stamp=rospy.Time.now()),
+            child_frame_id=topics.MAP_FRAME,
+            transform=self.transform.transform)
+
+    def to_message(self):
+        img = np.array([b if b != UNKNOWN else 255 for b in self.map_bytes], dtype=np.uint8)
+        img = np.reshape(img, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS), order='F')
+        img = np.rot90(img)
+
+        return MapData(transform=self.transform_stamped(),
+                       map_data=img)
+
+    def to_occupancy_grid(self):
+        offset = MAP_SIZE_METERS / -2.0
+        return OccupancyGrid(
+            info=MapMetaData(resolution=float(MAP_SIZE_METERS) / MAP_SIZE_PIXELS,
+                             width=MAP_SIZE_PIXELS,
+                             height=MAP_SIZE_PIXELS,
+                             origin=Pose(position=Point(x=offset, y=offset))),
+            data=[pixel_to_grid(x) for x in self.map_bytes])
+
+
+class LaneMap(Map):
+    def __init__(self, map_pub, tf_frame=None):
+        Map.__init__(self, map_pub, tf_frame)
+
+    def publish(self):
         offset = MAP_SIZE_METERS / -2.0
 
         data = [pixel_to_grid(x) for x in self.map_bytes]
@@ -205,11 +243,12 @@ class Map:
                                                     max_height=contoursMaxHeight,
                                                     solidity=[contoursSolidityMin, contoursSolidityMax],
                                                     max_vertex_count=contoursMaxVertices,
-                                                    min_vertex_count=contoursMinVertices, min_ratio=contoursMinRatio,
+                                                    min_vertex_count=contoursMinVertices,
+                                                    min_ratio=contoursMinRatio,
                                                     max_ratio=contoursMaxRatio)
         display_filtered_contours = np.ones_like(im)
-        cv2.drawContours(display_filtered_contours, filtered_contours, -1, (255, 255, 255), thickness=-1)
-        cv2.imshow('contour', display_filtered_contours)
+        # cv2.drawContours(display_filtered_contours, filtered_contours, -1, (255, 255, 255), thickness=-1)
+        # cv2.imshow('contour', display_filtered_contours)
 
         cartesian_contours = cameras.convert_to_cartesian(MAP_SIZE_PIXELS, MAP_SIZE_PIXELS, contours)
         vec2d_contours = contours_to_vectors(cartesian_contours)
@@ -217,55 +256,10 @@ class Map:
 
         print "ANGLE: ", lane_angle
 
-        cv2.imshow("raw_thresh", thresh_im)
-        cv2.waitKey(3)
+        # cv2.imshow("raw_thresh", thresh_im)
+        # cv2.waitKey(3)
 
-        self.map_pub.publish(OccupancyGrid(
-            info=MapMetaData(resolution=float(MAP_SIZE_METERS) / MAP_SIZE_PIXELS,
-                             width=MAP_SIZE_PIXELS,
-                             height=MAP_SIZE_PIXELS,
-                             origin=Pose(position=Point(x=offset, y=offset))),
-            data=data))
-
-        # TODO: Translate map once +/- threshold from center
-        x, y, theta = self.get_position()
-
-        self.pos_pub.publish(PoseStamped(header=Header(frame_id='map'),
-                                         pose=Pose(position=Point(x=x / 1000 + offset, y=y / 1000 + offset),
-                                                   orientation=Quaternion())))
-
-    def publish(self):
-        self.rviz_pub.publish(self.to_occupancy_grid())
-        self.map_pub.publish(pickle.dumps(self.to_message()))
-        self.publish_pose()
-
-    def publish_pose(self):
-        if self.br is not None:
-            self.br.sendTransformMessage(self.transform_stamped())
-
-    def transform_stamped(self):
-        return TransformStamped(
-            header=Header(frame_id=topics.WORLD_FRAME,
-                          stamp=rospy.Time.now()),
-            child_frame_id=topics.MAP_FRAME,
-            transform=self.transform.transform)
-
-    def to_message(self):
-        img = np.array([b if b != UNKNOWN else 255 for b in self.map_bytes], dtype=np.uint8)
-        img = np.reshape(img, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS), order='F')
-        img = np.rot90(img)
-
-        return MapData(transform=self.transform_stamped(),
-                       map_data=img)
-
-    def to_occupancy_grid(self):
-        offset = MAP_SIZE_METERS / -2.0
-        return OccupancyGrid(
-            info=MapMetaData(resolution=float(MAP_SIZE_METERS) / MAP_SIZE_PIXELS,
-                             width=MAP_SIZE_PIXELS,
-                             height=MAP_SIZE_PIXELS,
-                             origin=Pose(position=Point(x=offset, y=offset))),
-            data=[pixel_to_grid(x) for x in self.map_bytes])
+        Map.publish(self)
 
 
 def diff_state(state):
@@ -292,19 +286,6 @@ def start_mapping():
     odometry = rx_subscribe('/tf', TFMessage, parse=None) \
         .let(extract_tf(topics.ODOMETRY_FRAME))
 
-    combined_map = Map(topics.MAP, topics.MAP_FRAME)
-    camera_map = Map(topics.LINE_MAP, None)
-
-    lidar = Observable.of([])
-
-    camera = rx_subscribe(topics.CAMERA) \
-        .map(lambda msg: [v for contour in (contours_to_vectors(msg.contours)) for v in contour]) \
-        .start_with([])
-
-    no_barrels_camera = rx_subscribe(topics.NO_BARREL_CAMERA) \
-        .map(lambda msg: [v for v in msg.contours]) \
-        .start_with([])
-
     def publish_map(map, scans):
         return scans.with_latest_from(odometry, lambda v, o: (v, o, rospy.get_rostime().to_sec())) \
             .pairwise() \
@@ -315,17 +296,15 @@ def start_mapping():
             .subscribe(on_next=lambda _: map.publish(),
                        on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 
-    # FIXME
-    # def publish_lane_map(map, scans):
-    #     return scans.with_latest_from(odometry, lambda v, o: (v, o, rospy.get_rostime().to_sec())) \
-    #         .pairwise() \
-    #         .map(diff_state) \
-    #         .do_action(map.update) \
-    #         .subscribe(on_next=lambda _: map.publish_lanes(),
-    #                    on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
-    #     publish_lane_map(camera_map, no_barrels_camera)
+    lidar = rx_subscribe(topics.LIDAR).start_with([])
+    lidar_map = Map(topics.MAP, ANGLE_IGNORE_WINDOW, topics.MAP_FRAME)
+    publish_map(lidar_map, lidar)
 
-    publish_map(combined_map, camera.with_latest_from(lidar, lambda c, l: l + c))
+    no_barrels_camera = rx_subscribe(topics.NO_BARREL_CAMERA) \
+        .map(lambda msg: fill_scan([c for c in msg.contours], True)) \
+        .start_with([])
+    lane_map = LaneMap(topics.LANE_MAP, 120)
+    publish_map(lane_map, no_barrels_camera)
 
     rospy.spin()
 
