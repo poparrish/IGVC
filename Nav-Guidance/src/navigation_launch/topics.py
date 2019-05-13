@@ -1,5 +1,5 @@
 MAP = 'map'
-LINE_MAP = 'line_map'
+LINE_ANGLE = 'line_angle'
 
 POTENTIAL_FIELD = 'potential_field'
 PATH = 'path'

@@ -14,7 +14,8 @@ LINE_MAP_NAV_NODE = 'LINE_MAP_NAV_NODE'
 
 
 def process_state(camera, lidar):
-    return {'camera': contours_to_vectors(camera.contours),
+    return {'camera': camera.contours,
+            # 'camera': contours_to_vectors(camera.contours),
             'lidar': lidar}
 
 

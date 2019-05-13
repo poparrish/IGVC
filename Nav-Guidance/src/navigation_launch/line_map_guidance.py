@@ -52,14 +52,29 @@ def update_raw_map((msg)):
     lidar = msg['lidar']
 
     #lidarPointCloud = build_point_cloud(lidar)
-    camera_cloud = flatten_contours(camera)#this returns lists, not Vec2d object input
+    # camera_cloud = flatten_contours(camera)#this returns lists, not Vec2d object input
+    # print "CAMERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA: ",camera[0][0]
+
+
+
 
     #convert to depth map
     #get_depth_map(lidar, camera_cloud) #this returns lists not Vec2d Object input
     global lx,ly
     lx,ly = flatten_axes(lidar)
     global cx, cy
-    cx,cy = flatten_axes(camera_cloud)
+
+    cx = np.array([v.x for v in camera])
+    cy = np.array([v.y for v in camera])
+    cx,cy = flatten_axes(camera)
+
+
+
+    # slope, intercept = np.polyfit(cy,cx,1)
+    # yfit = [intercept+slope*y for y in cy]
+    # plt.plot(cy,yfit)
+    #[slope, intercept] = np.polyfit(x, y, 1)
+
     # plt.show()
     # plt.draw()
 
@@ -132,6 +147,7 @@ if __name__ == "__main__":
     camera_plot= plt.plot([], [], 'ro')[0]
     lidar_plot = plt.plot([],[],'bo')[0]
     origin_plot = plt.plot(0,0,'yo')
+
     plt.show()
     plt.draw()
     main()

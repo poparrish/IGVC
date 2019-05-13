@@ -5,7 +5,7 @@ import cv2
 # temp
 import numpy as np
 import rospy
-from std_msgs.msg import String
+from std_msgs.msg import String, Int16
 
 import topics
 from camera_info import CameraInfo
@@ -20,7 +20,7 @@ from guidance import contours_to_vectors
 
 
 cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
-#cam_name = 2
+cam_name = 1
 
 
 def callback(x):
@@ -214,13 +214,36 @@ def closest_contour_slope(contours):
     else:
         return contour_slope(closest_contour)
 
+def closest_contour(contours):
+    i = 0#track which contour
+    results = []
+    for contour in contours:#find closest point per contour
+        closest = 10000000#just a large starting #
+        for vec in contour:
+            if closest > vec.mag:
+                closest = vec.mag
+        results.append([i,closest,vec.contour_group])
+        i+=1
+
+    closest_contour = []
+    closest = 10000000
+    for result in results:
+        if closest > result[1]:
+            closest = result[1]
+            closest_contour = contours[result[0]]
+    if len(closest_contour) == 0:
+        return 0
+    else:
+        return closest_contour
+
 def flatten_contours(pointCloud):
-    """merges contours"""
+    """merges contours, but preserves grouping. group #'s are arbitrary"""
     cloud = []
     contour_count=0
     for contour in pointCloud:
         contour_count+=1
         for point in contour:
+            point.contour_group=contour_count#assign a contour group
             cloud.append(point)
     return cloud
 
@@ -239,8 +262,10 @@ def filter_barrel_lines(camera,angle_range,lidar_vecs,mag_cusion):
     """
 
     camera_vecs = flatten_contours(camera)
+    print "camera_vecs: ", camera_vecs
     if len(camera_vecs) == 0:
         return camera_vecs
+
     else:
         camera_vecs.sort(key=lambda x: x.angle)
         start_iter_angle =int(camera_vecs[0].angle)
@@ -286,6 +311,41 @@ def update_lidar(laser_pickle):
     global lidar
     lidar=laser_pickle
 
+def vector_to_point(vector):
+    return vector.x, vector.y
+
+def vectors_to_points(vector_contours):
+    return [[vector_to_point(v) for v in c]for c in vector_contours]
+
+def vectors_to_contours(vectors):#same as points just restores contour grouping
+    if len(vectors) ==0:
+        return 0
+    i =0
+    #sort contours by contour group
+    vectors_sorted=sorted(vectors,key=lambda x: x.contour_group)
+    num_vectors = len(vectors_sorted)-1
+    num_contours=vectors_sorted[num_vectors].contour_group
+
+    contours = [[]for j in range(num_contours)]#init a 2d list for contours
+    for v in vectors_sorted:
+        if v.contour_group == i+1:
+            contours[i].append(v)
+        else:
+            i+=1
+
+    return contours
+
+def calculate_line_angle(contour):
+    if contour is None:
+        return 0
+
+    x = np.array([v.x for v in contour])
+    y = np.array([v.y for v in contour])
+
+    [slope, intercept] = np.polyfit(x, y, 1)
+    return math.degrees(math.atan(slope)),slope,intercept
+
+
 def camera_processor():
 
 
@@ -293,8 +353,9 @@ def camera_processor():
     cam = cv2.VideoCapture(cam_name)
 
     #init ros & camera stuff
-    pub = rospy.Publisher(topics.CAMERA, String, queue_size=10)
-    no_barrel_pub=rospy.Publisher(topics.NO_BARREL_CAMERA,String, queue_size=10)
+    # pub = rospy.Publisher(topics.CAMERA, String, queue_size=10)
+    no_barrel_pub=rospy.Publisher(topics.CAMERA,String, queue_size=10)
+    line_angle_pub=rospy.Publisher(topics.LINE_ANGLE, Int16, queue_size=0)
     global lidar
     lidar_obs = rx_subscribe(topics.LIDAR)
 
@@ -315,8 +376,8 @@ def camera_processor():
         ret_val, img = cam.read()
 
         #for debugging
-        cv2.line(img,(640/2,0),(640/2,480),color=(255,0,0),thickness=2)
-        cv2.line(img,(0,int(480*.25)),(640,int(480*.25)),color=(255,0,0),thickness=2)
+        # cv2.line(img,(640/2,0),(640/2,480),color=(255,0,0),thickness=2)
+        # cv2.line(img,(0,int(480*.25)),(640,int(480*.25)),color=(255,0,0),thickness=2)
 
         #crop down to speed processing time
         #img = cv2.imread('test_im2.jpg')
@@ -329,26 +390,52 @@ def camera_processor():
         #process the cropped image. returns a "birds eye" of the contours & binary image
         img_displayBirdsEye, contours = process_image(crop_img, camera_info)
 
-
+        #raw
         contours = convert_to_cartesian(camera_info.map_width, camera_info.map_height, contours)
+        #for filtered barrels
         vec2d_contour = contours_to_vectors(contours)#replaces NAV
         filtered_contours = filter_barrel_lines(camera=vec2d_contour, angle_range=4,lidar_vecs=lidar,mag_cusion=300)
 
+        #EXTEND THE LINES
+        filtered_cartesian_contours = vectors_to_contours(filtered_contours)
+
+        try:
+
+            closest_filtered_contour = closest_contour(filtered_cartesian_contours)
+
+            # print "CLOSESTCONTOUR: ",closest_filtered_contour
+
+            x_range = 5000
+            contour_lines=[]
+            interval = 40
+
+            #just one
+            line_angle, slope, intercept = calculate_line_angle(closest_filtered_contour)
+            for x in range(x_range * -1, x_range):
+                if x % interval == 0:
+                    y = slope * x + intercept
+                    v = Vec2d.from_point(x, y)
+                    contour_lines.append(v)
+
+        except TypeError:#no camera data
+            contour_lines=[]
+            line_angle=0
+
 
         #build the camera message with the contours and binary image
-        local_map_msg = CameraMsg(contours=contours, camera_info=camera_info)
-        filtered_map_msg=CameraMsg(contours=filtered_contours,camera_info=camera_info)
+        # local_map_msg = CameraMsg(contours=contours, camera_info=camera_info)
+        filtered_map_msg=CameraMsg(contours=contour_lines,camera_info=camera_info)
 
         #make bytestream and pass if off to ros
-        local_map_msg_string = local_map_msg.pickleMe()
+        # local_map_msg_string = local_map_msg.pickleMe()
         filtered_map_msg_string=filtered_map_msg.pickleMe()
 
         #rospy.loginfo(local_map_msg_string)
-        pub.publish(local_map_msg_string)
+        # pub.publish(local_map_msg_string)
         no_barrel_pub.publish(filtered_map_msg_string)
+        line_angle_pub.publish(line_angle)
 
 
-        pub.publish(local_map_msg_string)
         if cv2.waitKey(1) == 27:
             break
         rate.sleep()
@@ -389,12 +476,13 @@ if __name__ == '__main__':
     ilowV = 131
     ihighV = 255
 
-    # ilowH = 44
-    # ihighH = 62
-    # ilowS = 24
-    # ihighS = 119
-    # ilowV = 158
-    # ihighV = 252
+    #poolnoodle
+    ilowH = 0
+    ihighH = 76
+    ilowS = 14
+    ihighS = 156
+    ilowV = 160
+    ihighV = 252
 
     # ilowH = 85
     # ihighH = 118
