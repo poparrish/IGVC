@@ -6,7 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Map1
         - /TF1/Frames1
       Splitter Ratio: 0.5
     Tree Height: 534
@@ -28,7 +27,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Image
+    SyncSource: ""
 Visualization Manager:
   Class: ""
   Displays:
@@ -49,6 +48,16 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
+      Value: true
+    - Alpha: 0.699999988
+      Class: rviz/Map
+      Color Scheme: map
+      Draw Behind: false
+      Enabled: true
+      Name: Map
+      Topic: /line_map_rviz
+      Unreliable: false
+      Use Timestamp: false
       Value: true
     - Alpha: 0.699999988
       Class: rviz/Map
@@ -90,8 +99,6 @@ Visualization Manager:
         All Enabled: true
         map:
           Value: true
-        odom:
-          Value: true
         world:
           Value: true
       Marker Scale: 1
@@ -102,8 +109,6 @@ Visualization Manager:
       Tree:
         world:
           map:
-            {}
-          odom:
             {}
       Update Interval: 0
       Value: true
@@ -159,7 +164,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.12345028
+      Distance: 5.3237319
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -174,10 +179,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.989796877
+      Pitch: 0.65979737
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.42317581
+      Yaw: 3.05817938
     Saved: ~
 Window Geometry:
   Displays:

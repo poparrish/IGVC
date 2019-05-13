@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import math
 import pickle
+import time
 import traceback
 
 import cv2
@@ -131,6 +132,7 @@ class Map:
         self.slam = create_slam(self.angle_ignore_window)
 
     def update(self, (scan, dxy_mm, dtheta_degrees, dt_seconds, new_transform)):
+        start = time.time()
         # Extract distances and angles from vectors
         scan = [v for v in scan if self.in_range(v)]
         distances = [v.mag for v in scan]
@@ -147,6 +149,8 @@ class Map:
                abs(self.transform.transform.translation.y - new_transform.transform.translation.y)) > MAX_TRAVEL_M:
             self.zero()
             self.transform = new_transform
+        end = time.time()
+        print 'Update took: %s' % (end - start)
 
     # TODO: Scan window should be configurable per-map
     def in_range(self, scan):
@@ -166,9 +170,12 @@ class Map:
                theta
 
     def publish(self):
+        start = time.time()
         self.rviz_pub.publish(self.to_occupancy_grid())
         self.map_pub.publish(pickle.dumps(self.to_message()))
         self.publish_pose()
+        end = time.time()
+        print 'Publish took: %s' % (end - start)
 
     def publish_pose(self):
         if hasattr(self, 'br'):
@@ -182,7 +189,10 @@ class Map:
             transform=self.transform.transform)
 
     def to_message(self):
-        img = np.array([b if b != UNKNOWN else 255 for b in self.map_bytes], dtype=np.uint8)
+        img = np.array(self.map_bytes, dtype=np.uint8)
+        for i in xrange(len(img)):
+            if img[i] == UNKNOWN:
+                img[i] = 255
         img = np.reshape(img, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS), order='F')
         img = np.rot90(img)
 
@@ -196,7 +206,7 @@ class Map:
                              width=MAP_SIZE_PIXELS,
                              height=MAP_SIZE_PIXELS,
                              origin=Pose(position=Point(x=offset, y=offset))),
-            data=[pixel_to_grid(x) for x in self.map_bytes])
+            data=[np.int8(pixel_to_grid(x)) for x in self.map_bytes])
 
 
 class LaneMap(Map):
@@ -204,57 +214,57 @@ class LaneMap(Map):
         Map.__init__(self, map_pub, tf_frame)
 
     def publish(self):
-        offset = MAP_SIZE_METERS / -2.0
-
-        data = [pixel_to_grid(x) for x in self.map_bytes]
-
-        a = np.array(data)
-        npdata = np.reshape(a, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS))
-
-        im = np.array(npdata, dtype=np.uint8)
-        rows, cols = im.shape
-        M = cv2.getRotationMatrix2D((cols / 2, rows / 2), 90, 1)
-        rot_im = cv2.warpAffine(im, M, (cols, rows))
-        inv_im = cv2.bitwise_not(rot_im)
-        thresh_im = cv2.inRange(inv_im, 60, 200)
-        radius = 1
-        ksize = int(6 * round(radius) + 1)
-        gauss_im = cv2.GaussianBlur(thresh_im, (ksize, ksize), round(radius))
-        contours = cameras.find_contours(input=gauss_im, external_only=False)
-        display_contours = np.ones_like(im)
-        cv2.drawContours(display_contours, contours, -1, (255, 255, 255), thickness=1)
-        contoursMinArea = 150
-        contoursMinPerimeter = 1
-        contoursMinWidth = 0
-        contoursMaxWidth = 1000000
-        contoursMinHeight = 0
-        contoursMaxHeight = 1000000
-        contoursSolidity = [21, 100]
-        contoursSolidityMin = 21
-        contoursSolidityMax = 100
-        contoursMaxVertices = 1000000
-        contoursMinVertices = 0
-        contoursMinRatio = 0
-        contoursMaxRatio = 10000
-        filtered_contours = cameras.filter_contours(input_contours=contours, min_area=contoursMinArea,
-                                                    min_perimeter=contoursMinPerimeter,
-                                                    min_width=contoursMinWidth, max_width=contoursMaxWidth,
-                                                    min_height=contoursMinHeight,
-                                                    max_height=contoursMaxHeight,
-                                                    solidity=[contoursSolidityMin, contoursSolidityMax],
-                                                    max_vertex_count=contoursMaxVertices,
-                                                    min_vertex_count=contoursMinVertices,
-                                                    min_ratio=contoursMinRatio,
-                                                    max_ratio=contoursMaxRatio)
-        display_filtered_contours = np.ones_like(im)
-        # cv2.drawContours(display_filtered_contours, filtered_contours, -1, (255, 255, 255), thickness=-1)
-        # cv2.imshow('contour', display_filtered_contours)
-
-        cartesian_contours = cameras.convert_to_cartesian(MAP_SIZE_PIXELS, MAP_SIZE_PIXELS, contours)
-        vec2d_contours = contours_to_vectors(cartesian_contours)
-        lane_angle = cameras.closest_contour_slope(vec2d_contours)
-
-        print "ANGLE: ", lane_angle
+        # offset = MAP_SIZE_METERS / -2.0
+        #
+        # data = [pixel_to_grid(x) for x in self.map_bytes]
+        #
+        # a = np.array(data)
+        # npdata = np.reshape(a, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS))
+        #
+        # im = np.array(npdata, dtype=np.uint8)
+        # rows, cols = im.shape
+        # M = cv2.getRotationMatrix2D((cols / 2, rows / 2), 90, 1)
+        # rot_im = cv2.warpAffine(im, M, (cols, rows))
+        # inv_im = cv2.bitwise_not(rot_im)
+        # thresh_im = cv2.inRange(inv_im, 60, 200)
+        # radius = 1
+        # ksize = int(6 * round(radius) + 1)
+        # gauss_im = cv2.GaussianBlur(thresh_im, (ksize, ksize), round(radius))
+        # contours = cameras.find_contours(input=gauss_im, external_only=False)
+        # display_contours = np.ones_like(im)
+        # cv2.drawContours(display_contours, contours, -1, (255, 255, 255), thickness=1)
+        # contoursMinArea = 150
+        # contoursMinPerimeter = 1
+        # contoursMinWidth = 0
+        # contoursMaxWidth = 1000000
+        # contoursMinHeight = 0
+        # contoursMaxHeight = 1000000
+        # contoursSolidity = [21, 100]
+        # contoursSolidityMin = 21
+        # contoursSolidityMax = 100
+        # contoursMaxVertices = 1000000
+        # contoursMinVertices = 0
+        # contoursMinRatio = 0
+        # contoursMaxRatio = 10000
+        # filtered_contours = cameras.filter_contours(input_contours=contours, min_area=contoursMinArea,
+        #                                             min_perimeter=contoursMinPerimeter,
+        #                                             min_width=contoursMinWidth, max_width=contoursMaxWidth,
+        #                                             min_height=contoursMinHeight,
+        #                                             max_height=contoursMaxHeight,
+        #                                             solidity=[contoursSolidityMin, contoursSolidityMax],
+        #                                             max_vertex_count=contoursMaxVertices,
+        #                                             min_vertex_count=contoursMinVertices,
+        #                                             min_ratio=contoursMinRatio,
+        #                                             max_ratio=contoursMaxRatio)
+        # display_filtered_contours = np.ones_like(im)
+        # # cv2.drawContours(display_filtered_contours, filtered_contours, -1, (255, 255, 255), thickness=-1)
+        # # cv2.imshow('contour', display_filtered_contours)
+        #
+        # cartesian_contours = cameras.convert_to_cartesian(MAP_SIZE_PIXELS, MAP_SIZE_PIXELS, contours)
+        # vec2d_contours = contours_to_vectors(cartesian_contours)
+        # lane_angle = cameras.closest_contour_slope(vec2d_contours)
+        #
+        # print "ANGLE: ", lane_angle
 
         # cv2.imshow("raw_thresh", thresh_im)
         # cv2.waitKey(3)
@@ -284,7 +294,8 @@ def start_mapping():
     rospy.init_node('mapping')
 
     odometry = rx_subscribe('/tf', TFMessage, parse=None) \
-        .let(extract_tf(topics.ODOMETRY_FRAME))
+        .let(extract_tf(topics.ODOMETRY_FRAME)) \
+        .start_with(TransformStamped(transform=Transform(rotation=Quaternion(0, 0, 0, 1))))
 
     def publish_map(map, scans):
         return scans.with_latest_from(odometry, lambda v, o: (v, o, rospy.get_rostime().to_sec())) \
@@ -303,7 +314,7 @@ def start_mapping():
     no_barrels_camera = rx_subscribe(topics.NO_BARREL_CAMERA) \
         .map(lambda msg: fill_scan([c for c in msg.contours], True)) \
         .start_with([])
-    lane_map = LaneMap(topics.LANE_MAP, 120)
+    lane_map = Map(topics.LANE_MAP, ANGLE_IGNORE_WINDOW, topics.MAP_FRAME)
     publish_map(lane_map, no_barrels_camera)
 
     rospy.spin()
