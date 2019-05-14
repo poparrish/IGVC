@@ -82,4 +82,4 @@ def start_gps(device):
 
 
 if __name__ == '__main__':
-    start_gps('/dev/ttyACM0')
+    start_gps('/dev/pixhawk')

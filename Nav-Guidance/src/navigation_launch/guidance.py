@@ -8,7 +8,7 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, Pos
 from nav_msgs.msg import OccupancyGrid, Path
 from rx import Observable
 from sensor_msgs.msg import Image
-from std_msgs.msg import String, Header
+from std_msgs.msg import String, Header, Int16
 from tf.transformations import quaternion_from_euler
 from tf2_msgs.msg import TFMessage
 
@@ -43,7 +43,7 @@ def update_drivetrain(translation, rotation, speed):
     translation = max(-MAX_TRANSLATION, min(translation, MAX_TRANSLATION))
     rotation = max(-MAX_ROTATION, min(rotation, MAX_ROTATION))
     # speed, velocity_vector, theta_dot
-    control.publish(Vector3(x=speed, y=translation, z=rotation))
+    control.publish(Vector3(x=speed, y=translation, z=-rotation))
 
 
 #
@@ -194,7 +194,7 @@ def y_to_m(y):
     return ((MAP_SIZE_PIXELS / 2.0) - y) * scale
 
 
-def update_control((msg, map_grid, map_pose, pose, state)):
+def update_control((msg, map_grid, map_pose, pose, line_angle, state)):
     """figures out what we need to do based on the current state and map"""
     camera = msg['camera']
     lidar = msg['lidar']
@@ -226,13 +226,17 @@ def update_control((msg, map_grid, map_pose, pose, state)):
 
     # calculate theta_dot based on the current state
     if state['state'] == LINE_FOLLOWING:
-        offset = 2
-        goal = Vec2d(0, 1)  # always drive forward
-        rotation = calculate_line_angle(camera)  # rotate to follow lines
+        offset = 1
+        if len(path) < offset + 1:
+            goal = Vec2d(0, 1)  # always drive forward
+        else:
+            point = path[offset]
+            goal = Vec2d.from_point(x_to_m(point[0] + 0.5), y_to_m(point[1] + 0.5))
+        rotation = line_angle.data # rotate to follow lines
         if abs(rotation) < 10:
             rotation = 0
 
-        rotation /= 4.0
+        rotation /= 1.0
 
     else:
         # FIXME
@@ -289,11 +293,12 @@ def main():
 
     # only update map at 1hz to help with noise
     map_with_pos = rx_subscribe(topics.MAP, String)
-
+    line_angle = rx_subscribe(topics.LINE_ANGLE, Int16, parse=None).start_with(Int16(0))
     # cap update rate to 10Hz, otherwise guidance will fall behind
-    pos = tf.let(extract_tf(topics.ODOMETRY_FRAME))
+    pos = tf.let(extract_tf(topics.ODOMETRY_FRAME)).start_with(TransformStamped(transform=Transform(rotation=Quaternion(0, 0, 0, 1))))
 
-    pos.combine_latest(state, nav, map_with_pos, lambda o, s, n, m: (n, m.map_bytes, m.transform, o, s)) \
+    pos.combine_latest(state, nav, map_with_pos, line_angle,
+                       lambda o, s, n, m, a: (n, m.map_bytes, m.transform, o, a, s)) \
         .throttle_last(250) \
         .subscribe(update_control)
 

@@ -480,7 +480,7 @@ if __name__ == '__main__':
     ihighH = 76
     ilowS = 14
     ihighS = 156
-    ilowV = 160
+    ilowV = 229
     ihighV = 252
 
     # ilowH = 85

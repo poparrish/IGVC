@@ -50,7 +50,7 @@ def fill_scan(scan, max=False):
 
     for x in xrange(0, 360):
         if max:
-            nearest.append(Vec2d(x, MAX_DIST_MM))
+            nearest.append(Vec2d(x, 3500))
         else:
             nearest.append(None)
 
@@ -64,8 +64,10 @@ def fill_scan(scan, max=False):
         else:
             nearest[angle] = v
 
-    nearest[0] = Vec2d(0, MAX_DIST_MM)
-    nearest[359] = Vec2d(359, MAX_DIST_MM)
+    for i in xrange(ANGLE_IGNORE_WINDOW, ANGLE_IGNORE_WINDOW + 10):
+        nearest[i] = Vec2d(i, MAX_DIST_MM)
+    for i in xrange(360 - ANGLE_IGNORE_WINDOW - 10, 360 - ANGLE_IGNORE_WINDOW):
+        nearest[i] = Vec2d(i, MAX_DIST_MM)
     return [n for n in nearest if n is not None]
 
 
@@ -93,7 +95,7 @@ def create_slam(angle_ignore_window):
                     offset_mm=0),
         map_size_pixels=MAP_SIZE_PIXELS,
         map_size_meters=MAP_SIZE_METERS,
-        hole_width_mm=500,
+        hole_width_mm=300,
         sigma_theta_degrees=0,  # disable directional prediction; we have a compass
         sigma_xy_mm=0)
 
@@ -218,8 +220,8 @@ class Map:
             img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
             try:
                 cv2.drawContours(img, contours_, -1, (0, 0, 0), thickness=3)
-            except:
-                rospy.logerr('Failed to draw contours')
+            except Exception as e:
+                rospy.logerr('Failed to draw contours %s', e)
                 pass
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -339,7 +341,7 @@ def start_mapping():
             .subscribe(on_next=lambda cam: map.publish(cam),
                        on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 
-    lidar = rx_subscribe(topics.LIDAR).start_with([])
+    lidar = rx_subscribe(topics.LIDAR).start_with([]).map(lambda scans: fill_scan(scans, True))
     lidar_map = Map(topics.MAP, ANGLE_IGNORE_WINDOW, topics.MAP_FRAME)
     publish_map(lidar_map, lidar)
 
