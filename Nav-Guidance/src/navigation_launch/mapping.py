@@ -10,8 +10,10 @@ import rospy
 import tf
 from breezyslam.algorithms import RMHC_SLAM
 from breezyslam.sensors import Laser
+from cv_bridge import CvBridge
 from geometry_msgs.msg import Pose, Point, TransformStamped, Transform, Quaternion, PoseStamped
 from nav_msgs.msg import OccupancyGrid, MapMetaData
+from sensor_msgs.msg import Image
 from std_msgs.msg import Header, String
 from tf2_msgs.msg import TFMessage
 
@@ -31,6 +33,16 @@ MAX_DIST_MM = 10000
 MAX_TRAVEL_M = 0.5  # TODO: Name
 
 UNKNOWN = 127  # unmapped/unknown value set in map
+
+bridge = CvBridge()
+
+
+def x_to_pixel(m):
+    return int(m / MAP_SIZE_METERS * MAP_SIZE_PIXELS + MAP_SIZE_PIXELS / 2.0)
+
+
+def y_to_pixel(m):
+    return int(-m / MAP_SIZE_METERS * MAP_SIZE_PIXELS + MAP_SIZE_PIXELS / 2.0)
 
 
 def fill_scan(scan, max=False):
@@ -97,6 +109,7 @@ class Map:
         self.slam = create_slam(angle_ignore_window)
         self.map_bytes = bytearray(MAP_SIZE_PIXELS * MAP_SIZE_PIXELS)
         self.rviz_pub = rospy.Publisher(map_pub + '_rviz', OccupancyGrid, queue_size=1)
+        self.img_pub = rospy.Publisher(map_pub + '_img', Image, queue_size=1)
         self.map_pub = rospy.Publisher(map_pub, String, queue_size=1)
         self.tf_frame = tf_frame
         if tf_frame is not None:
@@ -169,11 +182,13 @@ class Map:
                y / 1000.0 - MAP_SIZE_METERS / 2.0 + transform.y, \
                theta
 
-    def publish(self):
+    def publish(self, contours):
         start = time.time()
-        self.rviz_pub.publish(self.to_occupancy_grid())
-        self.map_pub.publish(pickle.dumps(self.to_message()))
+        msg = self.to_message(contours)
+        self.map_pub.publish(pickle.dumps(msg))
         self.publish_pose()
+        self.rviz_pub.publish(self.to_occupancy_grid())
+        self.img_pub.publish(bridge.cv2_to_imgmsg(msg.map_bytes, "mono8"))
         end = time.time()
         print 'Publish took: %s' % (end - start)
 
@@ -188,13 +203,25 @@ class Map:
             child_frame_id=topics.MAP_FRAME,
             transform=self.transform.transform)
 
-    def to_message(self):
+    def to_message(self, contours):
         img = np.array(self.map_bytes, dtype=np.uint8)
         for i in xrange(len(img)):
             if img[i] == UNKNOWN:
                 img[i] = 255
-        img = np.reshape(img, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS), order='F')
+        img = np.reshape(img, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS, 1), order='F')
         img = np.rot90(img)
+
+        # TODO: Figure out why drawContours throws exceptions
+        contours_ = [np.array([[x_to_pixel(c.x / 1000.0),
+                                y_to_pixel(c.y / 1000.0)] for c in contours], dtype=np.int32)]
+        if len(contours_) > 0:
+            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+            try:
+                cv2.drawContours(img, contours_, -1, (0, 0, 0), thickness=3)
+            except:
+                rospy.logerr('Failed to draw contours')
+                pass
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
         return MapData(transform=self.transform_stamped(),
                        map_data=img)
@@ -297,25 +324,27 @@ def start_mapping():
         .let(extract_tf(topics.ODOMETRY_FRAME)) \
         .start_with(TransformStamped(transform=Transform(rotation=Quaternion(0, 0, 0, 1))))
 
+    no_barrels_camera = rx_subscribe(topics.CAMERA) \
+        .map(lambda msg: msg.contours) \
+        .start_with([])
+
     def publish_map(map, scans):
         return scans.with_latest_from(odometry, lambda v, o: (v, o, rospy.get_rostime().to_sec())) \
             .pairwise() \
             .map(diff_state) \
             .throttle_last(200) \
             .do_action(map.update) \
+            .with_latest_from(no_barrels_camera, lambda state, cam: cam) \
             .do_action(lambda _: map.publish_pose()) \
-            .subscribe(on_next=lambda _: map.publish(),
+            .subscribe(on_next=lambda cam: map.publish(cam),
                        on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 
     lidar = rx_subscribe(topics.LIDAR).start_with([])
     lidar_map = Map(topics.MAP, ANGLE_IGNORE_WINDOW, topics.MAP_FRAME)
     publish_map(lidar_map, lidar)
 
-    no_barrels_camera = rx_subscribe(topics.NO_BARREL_CAMERA) \
-        .map(lambda msg: fill_scan([c for c in msg.contours], True)) \
-        .start_with([])
-    lane_map = Map(topics.LANE_MAP, ANGLE_IGNORE_WINDOW, topics.MAP_FRAME)
-    publish_map(lane_map, no_barrels_camera)
+    # lane_map = Map(topics.LANE_MAP, ANGLE_IGNORE_WINDOW, topics.MAP_FRAME)
+    # publish_map(lane_map, no_barrels_camera)
 
     rospy.spin()
 

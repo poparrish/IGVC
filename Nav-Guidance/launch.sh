@@ -15,4 +15,4 @@ chmod +x src/navigation_launch/Control_Node.py
 chmod +x src/navigation_launch/TeensyWrite_node.py
 chmod +x src/navigation_launch/compass_node.py
 
-roslaunch navigation_launch.launch
+roslaunch navigation_launch navigation_launch.launch

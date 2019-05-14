@@ -7,9 +7,9 @@
 <!--    <node name="TeensyWrite_node" pkg="navigation_launch" type="TeensyWrite_node.py" />-->
 <!--    <node name="compass_node" pkg="navigation_launch" type="compass_node.py" />-->
 
-<!--    <node name="lidar" pkg="navigation_launch" type="lidar.py" output="screen" />-->
+    <node name="lidar" pkg="navigation_launch" type="lidar.py" output="screen" />
 <!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-01-27-14-47-19-lidar-odometry.bag"/>-->
-    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/dev/2019-02-25-17-25-50.bag"/>
+<!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/dev/2019-02-25-17-25-50.bag"/>-->
 <!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-03-21-18-38-07.bag"/>-->
     <node name="mapping" pkg="navigation_launch" type="mapping.py" />
 

@@ -20,7 +20,6 @@ from guidance import contours_to_vectors
 
 
 cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
-cam_name = 1
 
 
 def callback(x):
@@ -222,7 +221,7 @@ def closest_contour(contours):
         for vec in contour:
             if closest > vec.mag:
                 closest = vec.mag
-        results.append([i,closest,vec.contour_group])
+        results.append([i, closest])
         i+=1
 
     closest_contour = []
@@ -329,7 +328,7 @@ def vectors_to_contours(vectors):#same as points just restores contour grouping
     contours = [[]for j in range(num_contours)]#init a 2d list for contours
     for v in vectors_sorted:
         if v.contour_group == i+1:
-            contours[i].append(v)
+            contours[i].append(v.with_angle(360 - v.angle))
         else:
             i+=1
 

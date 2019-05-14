@@ -213,16 +213,16 @@ def update_control((msg, map_grid, map_pose, pose, state)):
     map_rotation = map_pose.transform.rotation.z
     diff_rotation = math.degrees(rotation - map_rotation)
 
-    # costmap, path = generate_path(map_grid, diff_rotation, diff)
-    # costmap_debug.publish(bridge.cv2_to_imgmsg(costmap, 'mono8'))
-    # if path is None:
-    #     path = []
-    # path_debug.publish(
-    #     Path(header=Header(frame_id='map'),
-    #          poses=[PoseStamped(header=Header(frame_id='map'),
-    #                             pose=Pose(position=Point(x=x_to_m(p[0]),
-    #                                                      y=y_to_m(p[1]))))
-    #                 for p in path]))
+    costmap, path = generate_path(map_grid, diff_rotation, diff)
+    costmap_debug.publish(bridge.cv2_to_imgmsg(costmap, 'mono8'))
+    if path is None:
+        path = []
+    path_debug.publish(
+        Path(header=Header(frame_id='map'),
+             poses=[PoseStamped(header=Header(frame_id='map'),
+                                pose=Pose(position=Point(x=x_to_m(p[0]),
+                                                         y=y_to_m(p[1]))))
+                    for p in path]))
 
     # calculate theta_dot based on the current state
     if state['state'] == LINE_FOLLOWING:
