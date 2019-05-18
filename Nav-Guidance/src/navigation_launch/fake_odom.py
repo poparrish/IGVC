@@ -19,7 +19,7 @@ def start():
             child=topics.ODOMETRY_FRAME,
             parent=topics.WORLD_FRAME
         )
-        i += .01
+        i += .03
         # br.sendTransform(
         #     translation=(1.5 + i * 2, 1, 0),
         #     rotation=quaternion_from_euler(0, 0, 1),

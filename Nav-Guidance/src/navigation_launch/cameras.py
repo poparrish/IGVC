@@ -19,7 +19,7 @@ from guidance import contours_to_vectors
 
 
 
-cam_name = '/home/nregner/IGVC/Nav-Guidance/src/navigation_launch/dev/lines.avi'
+cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
 
 
 def callback(x):
@@ -478,19 +478,19 @@ if __name__ == '__main__':
     ihighV = 255
 
     #poolnoodle
-    ilowH = 45
+    ilowH = 0
     ihighH = 76
-    ilowS = 28
+    ilowS = 14
     ihighS = 156
     ilowV = 160
     ihighV = 252
 
-    # ilowH = 30
-    # ihighH = 96
-    # ilowS = 14
-    # ihighS = 61
-    # ilowV = 173
-    # ihighV = 255
+    ilowH = 30
+    ihighH = 96
+    ilowS = 14
+    ihighS = 61
+    ilowV = 173
+    ihighV = 255
 
 
     cv2.createTrackbar('lowH', 'img_HSV', ilowH, 255, callback)

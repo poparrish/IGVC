@@ -178,9 +178,8 @@ class Map:
                y / 1000.0 - MAP_SIZE_METERS / 2.0 + transform.y, \
                theta
 
-    def publish(self, contours):
+    def publish(self, msg):
         start = time.time()
-        msg = self.to_message(contours)
         self.map_pub.publish(pickle.dumps(msg))
         self.publish_pose()
         self.rviz_pub.publish(self.to_occupancy_grid())
@@ -199,25 +198,13 @@ class Map:
             child_frame_id=topics.MAP_FRAME,
             transform=self.transform.transform)
 
-    def to_message(self, contours):
+    def to_message(self):
         img = np.array(self.map_bytes, dtype=np.uint8)
         for i in xrange(len(img)):
             if img[i] == UNKNOWN:
                 img[i] = 255
         img = np.reshape(img, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS, 1), order='F')
         img = np.rot90(img)
-
-        # TODO: Figure out why drawContours throws exceptions
-        contours_ = [np.array([[x_to_pixel(c.x / 1000.0),
-                                y_to_pixel(c.y / 1000.0)] for c in contours], dtype=np.int32)]
-        if len(contours_) > 0:
-            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-            try:
-                cv2.drawContours(img, contours_, -1, (0, 0, 0), thickness=3)
-            except Exception as e:
-                # rospy.logerr('Failed to draw contours %s', e)
-                pass
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
         return MapData(transform=self.transform_stamped(),
                        map_data=img)
@@ -328,23 +315,24 @@ def start_mapping():
         .map(lambda scans: fill_scan(scans, camera_window, max=False)) \
         .start_with([])
 
-    def publish_map(map, scans):
+    def update_map(map, scans):
         return scans.with_latest_from(odometry, lambda v, o: (v, o, rospy.get_rostime().to_sec())) \
             .pairwise() \
             .map(diff_state) \
             .throttle_last(200) \
-            .do_action(map.update) \
-            .with_latest_from(no_barrels_camera, lambda state, cam: cam) \
-            .do_action(lambda _: map.publish_pose()) \
-            .subscribe(on_next=lambda cam: map.publish(cam),
-                       on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
+            .do_action(map.update)
+
+    lane_map = Map(topics.LANE_MAP, angle_ignore_window=camera_window)
+    update_map(lane_map, no_barrels_camera) \
+        .subscribe(on_next=lambda cam: lane_map.publish(lane_map.to_message()),
+                   on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 
     lidar = rx_subscribe(topics.LIDAR).start_with([]).map(lambda scans: fill_scan(scans, lidar_window, True))
     lidar_map = Map(topics.MAP, angle_ignore_window=lidar_window, tf_frame=topics.MAP_FRAME)
-    publish_map(lidar_map, lidar)
-
-    lane_map = Map(topics.LANE_MAP, angle_ignore_window=camera_window)
-    publish_map(lane_map, no_barrels_camera)
+    update_map(lidar_map, lidar) \
+        .do_action(lambda _: lidar_map.publish_pose()) \
+        .subscribe(on_next=lambda cam: lidar_map.publish(lidar_map.to_message() + lane_map.to_message()),
+                   on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 
     rospy.spin()
 
