@@ -423,7 +423,9 @@ def camera_processor():
 
         #build the camera message with the contours and binary image
         # local_map_msg = CameraMsg(contours=contours, camera_info=camera_info)
-        filtered_map_msg=CameraMsg(contours=contour_lines,camera_info=camera_info)
+        # filtered_map_msg=CameraMsg(contours=contour_lines,camera_info=camera_info)#1 polyfit contour
+        filtered_map_msg=CameraMsg(contours=filtered_contours,camera_info=camera_info)#all raw contours
+
 
         #make bytestream and pass if off to ros
         # local_map_msg_string = local_map_msg.pickleMe()
@@ -480,7 +482,7 @@ if __name__ == '__main__':
     ihighH = 76
     ilowS = 14
     ihighS = 156
-    ilowV = 229
+    ilowV = 160
     ihighV = 252
 
     # ilowH = 85
