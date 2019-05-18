@@ -4,23 +4,20 @@ import math
 import numpy as np
 import rospy
 from cv_bridge import CvBridge
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, PoseArray, TransformStamped, Transform
-from nav_msgs.msg import OccupancyGrid, Path
-from rx import Observable
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, TransformStamped, Transform
+from nav_msgs.msg import Path
 from sensor_msgs.msg import Image
 from std_msgs.msg import String, Header, Int16
 from tf.transformations import quaternion_from_euler
 from tf2_msgs.msg import TFMessage
 
 import topics
-from guidance import calculate_line_angle, compute_potential
+from guidance import compute_potential
 from guidance.attractor_placement import generate_path
 from guidance.gps_guidance import dist_to_waypoint, calculate_gps_heading
-from map_msg import MapData
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
-from nav import rx_subscribe
 from util import Vec2d, avg, to180
-from util.rosutil import extract_tf
+from util.rosutil import extract_tf, rx_subscribe
 
 GUIDANCE_NODE = "GUIDANCE"
 GUIDANCE_HZ = 10
@@ -126,14 +123,13 @@ DEFAULT_STATE = {
 #     'tracking': 0
 # }
 
-debug = None
 heading_debug = rospy.Publisher(topics.POTENTIAL_FIELD, PoseStamped, queue_size=1)
 costmap_debug = rospy.Publisher('guidance/costmap', Image, queue_size=1)
 path_debug = rospy.Publisher('guidance/path', Path, queue_size=1)
 bridge = CvBridge()
 
 
-def compute_next_state(state, (nav, gps_buffer)):
+def compute_next_state(state, gps_buffer):
     """guidance state machine"""
     # check if we need to slow down
     speed = state['speed']
@@ -196,14 +192,8 @@ def y_to_m(y):
     return ((MAP_SIZE_PIXELS / 2.0) - y) * scale
 
 
-def update_control((msg, map_grid, map_pose, pose, line_angle, state)):
+def update_control((gps, map_grid, map_pose, pose, line_angle, state)):
     """figures out what we need to do based on the current state and map"""
-    camera = msg['camera']
-    lidar = msg['lidar']
-    # for v in lidar:
-    #     if v.angle > 345 or v.angle < 15:
-    #         print(v)
-    gps = msg['gps']
 
     transform = pose.transform.translation
     map_transform = map_pose.transform.translation
@@ -272,35 +262,27 @@ def update_control((msg, map_grid, map_pose, pose, line_angle, state)):
 
 
 def main():
-    global control, debug
+    global control
 
     rospy.init_node(GUIDANCE_NODE)
     control = rospy.Publisher('input_vectors', Vector3, queue_size=3)
-    debug = rospy.Publisher('debug', String, queue_size=3)
 
-    # we randomly seem to get garbage messages that are only partially unpickled
-    # ignore them until we can figure out what's going on
-    def valid_message(msg):
-        return not isinstance(msg['camera'], basestring)
+    gps = rx_subscribe(topics.GPS)
 
-    nav = rx_subscribe(topics.NAV).filter(valid_message)
-    gps = nav.map(lambda msg: msg['gps']).buffer_with_count(GPS_BUFFER, 1)
-
-    # recompute state whenever nav or gps emits
-    state = nav.combine_latest(gps, lambda n, g: (n, g)) \
+    # compute state based on GPS coordinates
+    state = gps\
+        .buffer_with_count(GPS_BUFFER, 1)\
         .scan(compute_next_state, seed=DEFAULT_STATE)
 
     # update controls whenever position or state emits
     tf = rx_subscribe('/tf', TFMessage, parse=None, buffer_size=100)
 
-    # only update map at 1hz to help with noise
     map_with_pos = rx_subscribe(topics.MAP, String)
     line_angle = rx_subscribe(topics.LINE_ANGLE, Int16, parse=None).start_with(Int16(0))
-    # cap update rate to 10Hz, otherwise guidance will fall behind
     pos = tf.let(extract_tf(topics.ODOMETRY_FRAME)).start_with(TransformStamped(transform=Transform(rotation=Quaternion(0, 0, 0, 1))))
 
-    pos.combine_latest(state, nav, map_with_pos, line_angle,
-                       lambda o, s, n, m, a: (n, m.map_bytes, m.transform, o, a, s)) \
+    pos.combine_latest(state, gps, map_with_pos, line_angle,
+                       lambda o, s, g, m, a: (g, m.map_bytes, m.transform, o, a, s)) \
         .throttle_last(250) \
         .subscribe(update_control)
 

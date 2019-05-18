@@ -5,7 +5,6 @@ LINE_ANGLE = 'line_angle'
 POTENTIAL_FIELD = 'potential_field'
 PATH = 'path'
 TRAJECTORY = 'trajectory'  # TODO: temporary
-NAV = 'nav'
 LIDAR = 'scans'
 GPS = 'gps'
 CAMERA = 'camera'

@@ -11,16 +11,13 @@ import tf
 from breezyslam.algorithms import RMHC_SLAM
 from breezyslam.sensors import Laser
 from cv_bridge import CvBridge
-from geometry_msgs.msg import Pose, Point, TransformStamped, Transform, Quaternion, PoseStamped
+from geometry_msgs.msg import Pose, Point, TransformStamped, Transform, Quaternion
 from nav_msgs.msg import OccupancyGrid, MapMetaData
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header, String
 from tf2_msgs.msg import TFMessage
 
-import cameras
 import topics
-from guidance import contours_to_vectors
-from lidar import ANGLE_IGNORE_WINDOW
 from map_msg import MapData
 from util import rx_subscribe, Vec2d
 from util.rosutil import extract_tf
@@ -45,7 +42,7 @@ def y_to_pixel(m):
     return int(-m / MAP_SIZE_METERS * MAP_SIZE_PIXELS + MAP_SIZE_PIXELS / 2.0)
 
 
-def fill_scan(scan, max=False):
+def fill_scan(scan, angle_ignore_window, max=False):
     nearest = []
 
     for x in xrange(0, 360):
@@ -64,10 +61,6 @@ def fill_scan(scan, max=False):
         else:
             nearest[angle] = v
 
-    for i in xrange(ANGLE_IGNORE_WINDOW, ANGLE_IGNORE_WINDOW + 10):
-        nearest[i] = Vec2d(i, MAX_DIST_MM)
-    for i in xrange(360 - ANGLE_IGNORE_WINDOW - 10, 360 - ANGLE_IGNORE_WINDOW):
-        nearest[i] = Vec2d(i, MAX_DIST_MM)
     return [n for n in nearest if n is not None]
 
 
@@ -145,6 +138,7 @@ class Map:
         # reset slam
         self.map_bytes = bytearray(np.reshape(img, (MAP_SIZE_PIXELS ** 2)))
         self.slam = create_slam(self.angle_ignore_window)
+        self.slam.map.set(self.map_bytes)
 
     def update(self, (scan, dxy_mm, dtheta_degrees, dt_seconds, new_transform)):
         start = time.time()
@@ -322,12 +316,16 @@ def diff_state(state):
 def start_mapping():
     rospy.init_node('mapping')
 
+    camera_window = 155
+    lidar_window = 45
+
     odometry = rx_subscribe('/tf', TFMessage, parse=None) \
         .let(extract_tf(topics.ODOMETRY_FRAME)) \
         .start_with(TransformStamped(transform=Transform(rotation=Quaternion(0, 0, 0, 1))))
 
     no_barrels_camera = rx_subscribe(topics.CAMERA) \
         .map(lambda msg: msg.contours) \
+        .map(lambda scans: fill_scan(scans, camera_window, max=False)) \
         .start_with([])
 
     def publish_map(map, scans):
@@ -341,12 +339,12 @@ def start_mapping():
             .subscribe(on_next=lambda cam: map.publish(cam),
                        on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 
-    lidar = rx_subscribe(topics.LIDAR).start_with([]).map(lambda scans: fill_scan(scans, True))
-    lidar_map = Map(topics.MAP, ANGLE_IGNORE_WINDOW, topics.MAP_FRAME)
+    lidar = rx_subscribe(topics.LIDAR).start_with([]).map(lambda scans: fill_scan(scans, lidar_window, True))
+    lidar_map = Map(topics.MAP, angle_ignore_window=lidar_window, tf_frame=topics.MAP_FRAME)
     publish_map(lidar_map, lidar)
 
-    # lane_map = Map(topics.LANE_MAP, ANGLE_IGNORE_WINDOW, topics.MAP_FRAME)
-    # publish_map(lane_map, no_barrels_camera)
+    lane_map = Map(topics.LANE_MAP, angle_ignore_window=camera_window)
+    publish_map(lane_map, no_barrels_camera)
 
     rospy.spin()
 
