@@ -221,7 +221,7 @@ class Map:
             try:
                 cv2.drawContours(img, contours_, -1, (0, 0, 0), thickness=3)
             except Exception as e:
-                rospy.logerr('Failed to draw contours %s', e)
+                # rospy.logerr('Failed to draw contours %s', e)
                 pass
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 

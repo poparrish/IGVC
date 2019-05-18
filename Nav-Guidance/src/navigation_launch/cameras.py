@@ -485,12 +485,12 @@ if __name__ == '__main__':
     ilowV = 160
     ihighV = 252
 
-    # ilowH = 85
-    # ihighH = 118
-    # ilowS = 24
-    # ihighS = 81
-    # ilowV = 122
-    # ihighV = 255
+    ilowH = 30
+    ihighH = 96
+    ilowS = 14
+    ihighS = 61
+    ilowV = 173
+    ihighV = 255
 
 
     cv2.createTrackbar('lowH', 'img_HSV', ilowH, 255, callback)

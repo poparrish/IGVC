@@ -4,7 +4,7 @@ import math
 import numpy as np
 import rospy
 from cv_bridge import CvBridge
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, PoseArray, TransformStamped
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, PoseArray, TransformStamped, Transform
 from nav_msgs.msg import OccupancyGrid, Path
 from rx import Observable
 from sensor_msgs.msg import Image
@@ -29,11 +29,11 @@ GUIDANCE_HZ = 10
 # Drivetrain
 #
 
-INITIAL_SPEED = 0.75  # gotta go FAST
+INITIAL_SPEED = 1.5  # gotta go FAST
 INITIAL_DISTANCE_CUTOFF = 5000  # slow down once we're within 5m of something
 
 NORMAL_SPEED = .5  # forward speed in m/s
-MAX_ROTATION = 30  # max crabbing angle
+MAX_ROTATION = 90  # max crabbing angle
 MAX_TRANSLATION = 90  # max crabbing angle
 
 control = None
@@ -55,11 +55,11 @@ GPS_BUFFER = 5  # buffer GPS messages to help with accuracy
 FIRST_WAYPOINT_TOLERANCE = 1  # when to start tracking the first waypoint
 WAYPOINT_TOLERANCE = .5  # precision in meters
 
-# WAYPOINTS = [
-#    (43.600314, -116.197164),  # N/W corner of field
-#    (43.600248, -116.196955),  # center of field
-#    (43.600314, -116.197164),  # N/W corner of field
-# ]
+WAYPOINTS = [
+    # (43.600314, -116.197164),  # N/W corner of field
+    (43.600248, -116.196955),  # center of field
+    (43.600314, -116.197164),  # N/W corner of field
+]
 
 test1stwp = (42.6785268, -83.1953824)
 test2ndwp = (42.6786267, -83.1948953)
@@ -76,21 +76,23 @@ qual2 = (42.6778987274, -83.1954820799)
 
 rolling_average = []
 
-WAYPOINTS = [
-    endof,
-    qual1,
-    qual2,
-    qual1
-]
+# WAYPOINTS = [
+#     endof,
+#     qual1,
+#     qual2,
+#     qual1
+# ]
 
 northwp = [42.6790984, -83.1949250546]
 midwp = [42.6789603912, -83.1951132036]
 southwp = [42.6788026, -83.1949093082]
-WAYPOINTS = [
-    northwp,
-    midwp,
-    southwp
-]
+
+
+# WAYPOINTS = [
+#     northwp,
+#     midwp,
+#     southwp
+# ]
 
 
 # WAYPOINTS = [
