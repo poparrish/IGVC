@@ -1,16 +1,12 @@
 <launch>
-<!--    <node name="cameras" pkg="navigation_launch" type="cameras.py" />-->
-<!--    <node name="gps" pkg="navigation_launch" type="gps.py" />-->
+    <node name="costmap" pkg="navigation_launch" type="costmap.py" />
+    <node name="mapping" pkg="navigation_launch" type="mapping.py" />
     <node name="guidance" pkg="navigation_launch" type="guidance.py"  />
     <node name="odometry" pkg="navigation_launch" type="fake_odom.py"  />
-<!--    <node name="TeensyWrite_node" pkg="navigation_launch" type="TeensyWrite_node.py" />-->
-<!--    <node name="compass_node" pkg="navigation_launch" type="compass_node.py" />-->
 
-<!--    <node name="lidar" pkg="navigation_launch" type="lidar.py" output="screen" />-->
-<!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-01-27-14-47-19-lidar-odometry.bag"/>-->
+    <!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-01-27-14-47-19-lidar-odometry.bag"/>-->
     <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/dev/2019-02-25-17-25-50.bag"/>
 <!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-03-21-18-38-07.bag"/>-->
-    <node name="mapping" pkg="navigation_launch" type="mapping.py" />
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(dirname)/config.rviz"/>
 </launch>

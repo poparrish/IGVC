@@ -35,6 +35,18 @@ class PrioritySet:
         return len(self.queue)
 
 
+# Heuristics
+
+def manhattan((x1, y1), (x2, y2)):
+    return abs(x1 - x2) + abs(y1 - y2)
+
+
+def euclidean((x1, y1), (x2, y2)):
+    return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
+
+# A*
+
 def reconstruct_path(came_from, current):
     path = [current]
 
@@ -45,7 +57,7 @@ def reconstruct_path(came_from, current):
     return path
 
 
-def find_path(start, reached_goal, neighbors, weight):
+def find_path(start, reached_goal, neighbors, weight, heuristic=euclidean):
     closed_set = set()
     open_set = PrioritySet([(0, start)])
 
@@ -72,7 +84,7 @@ def find_path(start, reached_goal, neighbors, weight):
                 closed_set.add(neighbor)
                 continue
 
-            s = score[current] + weight(neighbor)
+            s = score[current] + heuristic(current, neighbor) + weight(neighbor)
             if neighbor not in open_set:
                 open_set.push((s, neighbor))
             elif s >= score[neighbor]:
@@ -85,14 +97,6 @@ def find_path(start, reached_goal, neighbors, weight):
         path = reconstruct_path(came_from, best)
         path.reverse()
         return path
-
-
-def manhattan((x1, y1), (x2, y2)):
-    return abs(x1 - x2) + abs(y1 - y2)
-
-
-def euclidean((x1, y1), (x2, y2)):
-    return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
 
 def grid_neighbors(grid, jump_size=1):
