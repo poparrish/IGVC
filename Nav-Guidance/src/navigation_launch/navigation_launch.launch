@@ -15,9 +15,6 @@
 -->
 
     <node name="lidar" pkg="navigation_launch" type="lidar.py" output="screen" />
-<!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-01-27-14-47-19-lidar-odometry.bag"/>-->
-<!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-02-25-17-25-50.bag"/>-->
-<!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-03-21-18-38-07.bag"/>-->
     <node name="mapping" pkg="navigation_launch" type="mapping.py" />
 <!--    <node name="path_planner" pkg="navigation_launch" type="path_planner.py" output="screen" />-->
 <!--    <node name="potential_field" pkg="navigation_launch" type="navigation_launch_potential_field" />-->
@@ -28,13 +25,5 @@
 -->
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(dirname)/config.rviz"/>
-
-<!--
-    <node pkg="gmapping" type="slam_gmapping" name="gmapping" output="screen">
-        <param name="base_frame" value="base_link"/>
-        <param name="odom_frame" value="odom"/>
-        <param name="delta" value="0.1"/>
-    </node>
--->
 </launch>
 

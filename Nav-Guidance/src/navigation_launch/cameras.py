@@ -19,7 +19,7 @@ from guidance import contours_to_vectors
 
 
 
-cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
+cam_name = '/home/nregner/IGVC/Nav-Guidance/src/navigation_launch/dev/arcs.avi'
 
 
 def callback(x):
@@ -424,7 +424,11 @@ def camera_processor():
         #build the camera message with the contours and binary image
         # local_map_msg = CameraMsg(contours=contours, camera_info=camera_info)
         # filtered_map_msg=CameraMsg(contours=contour_lines,camera_info=camera_info)#1 polyfit contour
-        filtered_map_msg=CameraMsg(contours=filtered_contours,camera_info=camera_info)#all raw contours
+        c = []
+        for cs in vec2d_contour:
+            for v in cs:
+                c.append(v)
+        filtered_map_msg=CameraMsg(contours=c,camera_info=camera_info)#all raw contours
 
 
         #make bytestream and pass if off to ros
@@ -478,19 +482,19 @@ if __name__ == '__main__':
     ihighV = 255
 
     #poolnoodle
-    ilowH = 0
+    ilowH = 45
     ihighH = 76
-    ilowS = 14
+    ilowS = 28
     ihighS = 156
     ilowV = 160
     ihighV = 252
 
-    ilowH = 30
-    ihighH = 96
-    ilowS = 14
-    ihighS = 61
-    ilowV = 173
-    ihighV = 255
+    # ilowH = 30
+    # ihighH = 96
+    # ilowS = 14
+    # ihighS = 61
+    # ilowV = 173
+    # ihighV = 255
 
 
     cv2.createTrackbar('lowH', 'img_HSV', ilowH, 255, callback)

@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 
 from a_star import find_path, grid_neighbors
-from mapping import MAP_SIZE_PIXELS, pixel_to_byte, MAP_SIZE_METERS
+from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from util import Vec2d
 
 SPACING = 2

@@ -23,10 +23,10 @@ def point_to_vector(p):
     [[x, y]] = p
     x = x*X_RES_MM
     y = (y* Y_RES_MM) + Y_OFFSET_MM
-    #y*=-1
-    x*=-1
+    # y*=-1
+    # x*=-1
     v = Vec2d.from_point(x, y)
-    return v.with_angle(270-v.angle )
+    return v.with_angle(v.angle+270)
 
 
 def contours_to_vectors(contours):

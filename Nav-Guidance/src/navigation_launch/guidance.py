@@ -26,7 +26,7 @@ GUIDANCE_HZ = 10
 # Drivetrain
 #
 
-INITIAL_SPEED = 1.5  # gotta go FAST
+INITIAL_SPEED = .75  # gotta go FAST
 INITIAL_DISTANCE_CUTOFF = 5000  # slow down once we're within 5m of something
 
 NORMAL_SPEED = .5  # forward speed in m/s
