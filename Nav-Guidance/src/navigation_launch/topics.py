@@ -11,6 +11,7 @@ CAMERA = 'camera'
 NO_BARREL_CAMERA = 'no_barrel_camera'
 ODOMETRY = 'ODOMETRY'
 ORIENTATION='orientation'
+COSTMAP = 'costmap'
 
 MAP_FRAME = 'map'
 ODOMETRY_FRAME = 'odom'

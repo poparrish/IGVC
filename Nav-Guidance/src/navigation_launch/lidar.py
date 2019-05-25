@@ -15,8 +15,8 @@ LIDAR_OFFSET_MM = 450  # offset from center
 
 
 def create_vector((quality, angle, dist)):
-    angle = -angle + 360  # invert lidar
-    return Vec2d(angle, dist)
+    d = Vec2d(angle, dist)
+    return Vec2d.from_point(-d.x, d.y)  # lidar is backwards, invert x
 
 
 def convert_scan_to_vectors(scan):

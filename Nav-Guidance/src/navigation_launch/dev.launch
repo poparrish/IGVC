@@ -1,7 +1,9 @@
 <launch>
     <node name="costmap" pkg="navigation_launch" type="costmap.py" />
-    <node name="mapping" pkg="navigation_launch" type="mapping.py" />
+    <node name="lidar_mapping" pkg="navigation_launch" type="mapping_lidar.py"/>
+    <node name="camera_mapping" pkg="navigation_launch" type="mapping_camera.py"/>
     <node name="guidance" pkg="navigation_launch" type="guidance.py"  />
+
     <node name="odometry" pkg="navigation_launch" type="fake_odom.py"  />
     <node name="gps" pkg="navigation_launch" type="fake_gps.py"  />
 

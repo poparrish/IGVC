@@ -7,15 +7,11 @@
 
 import math
 
-import cv2
-import numpy as np
-
 from a_star import find_path, grid_neighbors
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from util import Vec2d
 
 SPACING = 2
-COSTMAP_DILATION_M = 0.8  # closest distance to obstacles pathfinding is allowed to get
 CIRCLE_RADIUS = math.sqrt(2 * MAP_SIZE_PIXELS ** 2)
 
 
@@ -34,18 +30,6 @@ def navigable_edge_point((x, y), heading):
     return abs(math.degrees(angle) - heading) <= 90
 
 
-def build_costmap(grid):
-    # dilate obstacles
-    dilation = int(float(COSTMAP_DILATION_M) / MAP_SIZE_METERS * MAP_SIZE_PIXELS)
-    kernel = np.ones((dilation, dilation), np.uint8)
-    img = cv2.bitwise_not(grid)
-    img = cv2.dilate(img, kernel, iterations=1)
-    img = cv2.bitwise_not(img)
-
-    ret, img = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)
-    return img
-
-
 def x_to_pixel(m):
     return int(m / MAP_SIZE_METERS * MAP_SIZE_PIXELS + MAP_SIZE_PIXELS / 2.0)
 
@@ -54,8 +38,7 @@ def y_to_pixel(m):
     return int(-m / MAP_SIZE_METERS * MAP_SIZE_PIXELS + MAP_SIZE_PIXELS / 2.0)
 
 
-def generate_path(grid, heading, (x, y)):
-    costmap = build_costmap(grid)
+def generate_path(costmap, heading, (x, y)):
     valid_edges = set([e for e in edge_point() if navigable_edge_point(e, heading)])
 
     def is_goal(p):
@@ -82,4 +65,4 @@ def generate_path(grid, heading, (x, y)):
                      neighbors=grid_neighbors(costmap, jump_size=SPACING),
                      weight=weight)
 
-    return costmap, path
+    return path

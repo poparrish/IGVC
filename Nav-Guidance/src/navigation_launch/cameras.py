@@ -19,7 +19,7 @@ from guidance import contours_to_vectors
 
 
 
-cam_name = '/home/nregner/IGVC/Nav-Guidance/src/navigation_launch/dev/arcs.avi'
+cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
 
 
 def callback(x):

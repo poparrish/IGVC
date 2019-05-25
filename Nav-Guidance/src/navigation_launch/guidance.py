@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 import math
+import traceback
 
 import numpy as np
 import rospy
-from cv_bridge import CvBridge
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, TransformStamped, Transform
 from nav_msgs.msg import Path
-from sensor_msgs.msg import Image
 from std_msgs.msg import String, Header, Int16
 from tf.transformations import quaternion_from_euler
 from tf2_msgs.msg import TFMessage
@@ -124,9 +123,7 @@ DEFAULT_STATE = {
 # }
 
 heading_debug = rospy.Publisher(topics.POTENTIAL_FIELD, PoseStamped, queue_size=1)
-costmap_debug = rospy.Publisher('guidance/costmap', Image, queue_size=1)
 path_debug = rospy.Publisher('guidance/path', Path, queue_size=1)
-bridge = CvBridge()
 
 
 def compute_next_state(state, gps_buffer):
@@ -192,9 +189,10 @@ def y_to_m(y):
     return ((MAP_SIZE_PIXELS / 2.0) - y) * scale
 
 
-def update_control((gps, map_grid, map_pose, pose, line_angle, state)):
+def update_control((gps, costmap, pose, line_angle, state)):
     """figures out what we need to do based on the current state and map"""
-    print 'updating'
+    map_pose = costmap.transform
+
     transform = pose.transform.translation
     map_transform = map_pose.transform.translation
     diff = transform.x - map_transform.x, transform.y - map_transform.y
@@ -205,8 +203,7 @@ def update_control((gps, map_grid, map_pose, pose, line_angle, state)):
     map_rotation = map_pose.transform.rotation.z
     diff_rotation = math.degrees(rotation - map_rotation)
 
-    costmap, path = generate_path(map_grid, diff_rotation, diff)
-    costmap_debug.publish(bridge.cv2_to_imgmsg(costmap, 'mono8'))
+    path = generate_path(costmap.map_bytes, diff_rotation, diff)
     if path is None:
         path = []
     path_debug.publish(
@@ -224,7 +221,7 @@ def update_control((gps, map_grid, map_pose, pose, line_angle, state)):
         else:
             point = path[offset]
             goal = Vec2d.from_point(x_to_m(point[0] + 0.5), y_to_m(point[1] + 0.5))
-        rotation = line_angle.data # rotate to follow lines
+        rotation = line_angle.data  # rotate to follow lines
         if abs(rotation) < 10:
             rotation = 0
 
@@ -240,7 +237,7 @@ def update_control((gps, map_grid, map_pose, pose, line_angle, state)):
 
     # calculate translation based on obstacles
 
-    potential = compute_potential(diff, map_grid, goal)
+    potential = compute_potential(diff, costmap.map_bytes, goal)
     translation = to180(potential.angle)
 
     rospy.loginfo('translation = %s, rotation = %s, speed = %s', translation, rotation, state['speed'])
@@ -270,25 +267,24 @@ def main():
     gps = rx_subscribe(topics.GPS)
 
     # compute state based on GPS coordinates
-    state = gps\
-        .buffer_with_count(GPS_BUFFER, 1)\
+    state = gps \
+        .buffer_with_count(GPS_BUFFER, 1) \
         .scan(compute_next_state, seed=DEFAULT_STATE)
 
     # update controls whenever position or state emits
     tf = rx_subscribe('/tf', TFMessage, parse=None, buffer_size=100)
 
-    lidar_map = rx_subscribe(topics.MAP, String)
-    camera_map = rx_subscribe(topics.LANE_MAP, String)
-    combined_map = lidar_map.combine_latest(camera_map, lambda l, c: l + c) \
-        .throttle_first(200)
+    costmap = rx_subscribe(topics.COSTMAP, String)
 
     line_angle = rx_subscribe(topics.LINE_ANGLE, Int16, parse=None).start_with(Int16(0))
-    pos = tf.let(extract_tf(topics.ODOMETRY_FRAME)).start_with(TransformStamped(transform=Transform(rotation=Quaternion(0, 0, 0, 1))))
+    pos = tf.let(extract_tf(topics.ODOMETRY_FRAME)).start_with(
+        TransformStamped(transform=Transform(rotation=Quaternion(0, 0, 0, 1))))
 
-    pos.combine_latest(state, gps, combined_map, line_angle,
-                       lambda o, s, g, m, a: (g, m.map_bytes, m.transform, o, a, s)) \
+    pos.combine_latest(state, gps, costmap, line_angle,
+                       lambda o, s, g, m, a: (g, m, o, a, s)) \
         .throttle_last(250) \
-        .subscribe(update_control)
+        .subscribe(on_next=update_control,
+                   on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 
     rospy.spin()
 

@@ -9,7 +9,7 @@ from nav_msgs.msg import MapMetaData, OccupancyGrid
 from std_msgs.msg import Header
 
 import topics
-from util import to360
+from map_msg import MapData
 
 UNKNOWN = 127  # unmapped/unknown pixel value used by BreezySLAM
 EMPTY = 255  # no obstacles (white)
@@ -20,10 +20,6 @@ class MapUpdate:
         self.scan = scan
         self.time = time
         self.transform = transform
-
-
-def pixel_to_grid(x):
-    return (255 - x) / 255.0 * 127.0 if x != UNKNOWN else -1
 
 
 class Map:
@@ -131,6 +127,10 @@ class Map:
         img = np.rot90(img)
         return img
 
+    def to_msg(self, tf_frame):
+        return MapData(map_data=self.to_img(),
+                       transform=self.get_transform(tf_frame))
+
     def to_occupancy_grid(self):
         offset = self.size_meters / -2.0
         return OccupancyGrid(
@@ -138,7 +138,7 @@ class Map:
                              width=self.size_px,
                              height=self.size_px,
                              origin=Pose(position=Point(x=offset, y=offset))),
-            data=[pixel_to_grid(x) for x in self.map_bytes])
+            data=[((255 - x) / 255.0 * 127.0 if x != UNKNOWN else -1) for x in self.map_bytes])
 
     def get_transform(self, tf_frame):
         return TransformStamped(

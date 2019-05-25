@@ -15,7 +15,9 @@
 -->
 
     <node name="lidar" pkg="navigation_launch" type="lidar.py" output="screen" />
-    <node name="mapping" pkg="navigation_launch" type="mapping.py" />
+    <node name="lidar_mapping" pkg="navigation_launch" type="mapping_lidar.py" />
+    <node name="camera_mapping" pkg="navigation_launch" type="mapping_camera.py" />
+    <node name="costmap" pkg="navigation_launch" type="costmap.py" />
 <!--    <node name="path_planner" pkg="navigation_launch" type="path_planner.py" output="screen" />-->
 <!--    <node name="potential_field" pkg="navigation_launch" type="navigation_launch_potential_field" />-->
 
