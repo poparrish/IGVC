@@ -194,7 +194,7 @@ def y_to_m(y):
 
 def update_control((gps, map_grid, map_pose, pose, line_angle, state)):
     """figures out what we need to do based on the current state and map"""
-
+    print 'updating'
     transform = pose.transform.translation
     map_transform = map_pose.transform.translation
     diff = transform.x - map_transform.x, transform.y - map_transform.y
@@ -277,11 +277,15 @@ def main():
     # update controls whenever position or state emits
     tf = rx_subscribe('/tf', TFMessage, parse=None, buffer_size=100)
 
-    map_with_pos = rx_subscribe(topics.MAP, String)
+    lidar_map = rx_subscribe(topics.MAP, String)
+    camera_map = rx_subscribe(topics.LANE_MAP, String)
+    combined_map = lidar_map.combine_latest(camera_map, lambda l, c: l + c) \
+        .throttle_first(200)
+
     line_angle = rx_subscribe(topics.LINE_ANGLE, Int16, parse=None).start_with(Int16(0))
     pos = tf.let(extract_tf(topics.ODOMETRY_FRAME)).start_with(TransformStamped(transform=Transform(rotation=Quaternion(0, 0, 0, 1))))
 
-    pos.combine_latest(state, gps, map_with_pos, line_angle,
+    pos.combine_latest(state, gps, combined_map, line_angle,
                        lambda o, s, g, m, a: (g, m.map_bytes, m.transform, o, a, s)) \
         .throttle_last(250) \
         .subscribe(update_control)

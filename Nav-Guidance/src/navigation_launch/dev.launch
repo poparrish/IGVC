@@ -7,7 +7,6 @@
 
     <!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-01-27-14-47-19-lidar-odometry.bag"/>-->
     <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/dev/2019-02-25-17-25-50.bag"/>
-<!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-03-21-18-38-07.bag"/>-->
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(dirname)/config.rviz"/>
 </launch>

@@ -261,7 +261,7 @@ def filter_barrel_lines(camera,angle_range,lidar_vecs,mag_cusion):
     """
 
     camera_vecs = flatten_contours(camera)
-    print "camera_vecs: ", camera_vecs
+    # print "camera_vecs: ", camera_vecs
     if len(camera_vecs) == 0:
         return camera_vecs
 

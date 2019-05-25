@@ -27,7 +27,7 @@ def pixel_to_grid(x):
 
 
 class Map:
-    def __init__(self, size_px, size_meters, laser):
+    def __init__(self, size_px, size_meters, laser, max_travel=0.5):
         if laser.scan_size != laser.detection_angle_degrees:
             raise ValueError('laser scan_size must equal detection_angle_degrees')
         self.size_px = size_px
@@ -38,6 +38,7 @@ class Map:
         zero = TransformStamped(transform=Transform(rotation=Quaternion(0, 0, 0, 1)))
         self.transform = zero  # absolute offset relative to world frame
         self.last_update = MapUpdate(scan=[], time=rospy.get_rostime().to_sec(), transform=zero)
+        self.max_travel = max_travel
 
     def create_slam(self):
         return RMHC_SLAM(
@@ -60,8 +61,8 @@ class Map:
         dt_seconds = map_update.time - self.last_update.time
 
         scan = self.normalize_scan(map_update.scan)
-        if len(scan) != self.laser.scan_size:
-            raise ValueError('len(scan) != laser.scan_size %d %d' % (len(scan), self.laser.scan_size))
+        # if len(scan) != self.laser.scan_size:
+        #     raise ValueError('len(scan) != laser.scan_size %d %d' % (len(scan), self.laser.scan_size))
 
         self.slam.update(scans_mm=[v.mag for v in scan],
                          scan_angles_degrees=[v.angle for v in scan],
@@ -69,8 +70,9 @@ class Map:
         self.slam.getmap(self.map_bytes)
         self.last_update = map_update
 
-        if max(abs(self.transform.transform.translation.x - transform.translation.x),
-               abs(self.transform.transform.translation.y - transform.translation.y)) > 0.5:  # TODO: Configurable
+        traveled = max(abs(self.transform.transform.translation.x - transform.translation.x),
+                       abs(self.transform.transform.translation.y - transform.translation.y))
+        if traveled > self.max_travel:
             self.reset()
             self.transform = map_update.transform
 
@@ -79,14 +81,14 @@ class Map:
         return angle <= detection or angle > 360 - detection
 
     def normalize_scan(self, scan):
-        nearest = {}
+        closest = {}
 
         for v in scan:
             angle = int(v.angle)
-            if self.in_range(angle) and (angle not in nearest or nearest[angle].mag > v.mag):
-                nearest[angle] = v
+            if self.in_range(angle) and (angle not in closest or closest[angle].mag > v.mag):
+                closest[angle] = v
 
-        scan = [v.with_angle(v.angle + self.laser.detection_angle_degrees / 2.0) for v in nearest.values()]
+        scan = [v.with_angle(v.angle + self.laser.detection_angle_degrees / 2.0) for v in closest.values()]
         return sorted(scan, key=lambda v: v.angle)
 
     def reset(self):
