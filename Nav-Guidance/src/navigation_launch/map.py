@@ -16,10 +16,10 @@ EMPTY = 255  # no obstacles (white)
 
 
 class MapUpdate:
-    def __init__(self, scan, time, transform):
+    def __init__(self, scan, transform, time=None):
         self.scan = scan
-        self.time = time
         self.transform = transform
+        self.time = time if time is not None else rospy.get_rostime().to_sec()
 
 
 class Map:
@@ -31,9 +31,9 @@ class Map:
         self.map_bytes = bytearray(size_px ** 2)
         self.laser = laser
         self.slam = self.create_slam()
-        zero = TransformStamped(transform=Transform(rotation=Quaternion(0, 0, 0, 1)))
+        zero = Transform(rotation=Quaternion(0, 0, 0, 1))
         self.transform = zero  # absolute offset relative to world frame
-        self.last_update = MapUpdate(scan=[], time=rospy.get_rostime().to_sec(), transform=zero)
+        self.last_update = MapUpdate(scan=[], transform=zero)
         self.max_travel = max_travel
 
     def create_slam(self):
@@ -46,8 +46,8 @@ class Map:
             sigma_xy_mm=0)
 
     def update(self, map_update):
-        transform = map_update.transform.transform
-        last_transform = self.last_update.transform.transform
+        transform = map_update.transform
+        last_transform = self.last_update.transform
 
         # Calculate pose_change
         dx_mm = (transform.translation.x - last_transform.translation.x) * 1000.0
@@ -66,8 +66,8 @@ class Map:
         self.slam.getmap(self.map_bytes)
         self.last_update = map_update
 
-        traveled = max(abs(self.transform.transform.translation.x - transform.translation.x),
-                       abs(self.transform.transform.translation.y - transform.translation.y))
+        traveled = max(abs(self.transform.translation.x - transform.translation.x),
+                       abs(self.transform.translation.y - transform.translation.y))
         if traveled > self.max_travel:
             self.reset()
             self.transform = map_update.transform
@@ -124,7 +124,7 @@ class Map:
             if img[i] == UNKNOWN:
                 img[i] = EMPTY
         img = np.reshape(img, (self.size_px, self.size_px, 1), order='F')
-        img = np.rot90(img)
+        img = np.rot90(img, 1)
         return img
 
     def to_msg(self, tf_frame):
@@ -145,4 +145,4 @@ class Map:
             header=Header(frame_id=topics.WORLD_FRAME,
                           stamp=rospy.Time.now()),
             child_frame_id=tf_frame,
-            transform=self.transform.transform)
+            transform=self.transform)

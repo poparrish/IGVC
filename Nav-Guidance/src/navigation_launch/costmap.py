@@ -13,14 +13,15 @@ from map_msg import MapData
 from mapping import MAP_SIZE_METERS, MAP_SIZE_PIXELS
 from util import rx_subscribe
 
-COSTMAP_DILATION_M = 0.8  # closest distance to obstacles pathfinding is allowed to get
+COSTMAP_DILATION_M = 0.3  # closest distance to obstacles pathfinding is allowed to get
 
 
 def build_costmap(map_data):
     # dilate obstacles
     dilation = int(float(COSTMAP_DILATION_M) / MAP_SIZE_METERS * MAP_SIZE_PIXELS)
     kernel = np.ones((dilation, dilation), np.uint8)
-    img = cv2.bitwise_not(map_data.map_bytes)
+    img = map_data.map_bytes
+    img = cv2.bitwise_not(img)
     img = cv2.dilate(img, kernel, iterations=1)
     img = cv2.bitwise_not(img)
 

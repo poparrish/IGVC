@@ -641,7 +641,7 @@ def start():
 
     lastTrain = []
 
-    compass_calibrated = False
+    compass_calibrated = True
     compass_home = 0
 
     while not rospy.is_shutdown():

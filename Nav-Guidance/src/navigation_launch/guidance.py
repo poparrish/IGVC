@@ -4,8 +4,10 @@ import traceback
 
 import numpy as np
 import rospy
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, TransformStamped, Transform
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, TransformStamped, Transform, Point32
 from nav_msgs.msg import Path
+from rx.concurrency import ThreadPoolScheduler
+from sensor_msgs.msg import PointCloud
 from std_msgs.msg import String, Header, Int16
 from tf.transformations import quaternion_from_euler
 from tf2_msgs.msg import TFMessage
@@ -14,6 +16,7 @@ import topics
 from guidance import compute_potential
 from guidance.attractor_placement import generate_path
 from guidance.gps_guidance import dist_to_waypoint, calculate_gps_heading
+from guidance.potential_field import extract_repulsors
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from util import Vec2d, avg, to180
 from util.rosutil import extract_tf, rx_subscribe
@@ -124,6 +127,7 @@ DEFAULT_STATE = {
 
 heading_debug = rospy.Publisher(topics.POTENTIAL_FIELD, PoseStamped, queue_size=1)
 path_debug = rospy.Publisher('guidance/path', Path, queue_size=1)
+obstacle_debug = rospy.Publisher('guidance/obstacles', PointCloud, queue_size=1)
 
 
 def compute_next_state(state, gps_buffer):
@@ -215,7 +219,7 @@ def update_control((gps, costmap, pose, line_angle, state)):
 
     # calculate theta_dot based on the current state
     if state['state'] == LINE_FOLLOWING:
-        offset = 1
+        offset = 5
         if len(path) < offset + 1:
             goal = Vec2d(0, 1)  # always drive forward
         else:
@@ -225,6 +229,7 @@ def update_control((gps, costmap, pose, line_angle, state)):
         if abs(rotation) < 10:
             rotation = 0
 
+        goal = Vec2d(0, 1)  # always drive forward
         rotation /= 1.0
 
     else:
@@ -236,18 +241,20 @@ def update_control((gps, costmap, pose, line_angle, state)):
         # state_debug.publish(str(goal))
 
     # calculate translation based on obstacles
-
-    potential = compute_potential(diff, costmap.map_bytes, goal)
+    repulsors = extract_repulsors(diff, costmap.map_bytes)
+    potential = compute_potential(repulsors, goal)
+    obstacle_debug.publish(PointCloud(header=Header(frame_id='map'),
+                                      points=[Point32(x=v.x / 1000.0, y=v.y / 1000.0) for v in repulsors]))
     translation = to180(potential.angle)
 
     rospy.loginfo('translation = %s, rotation = %s, speed = %s', translation, rotation, state['speed'])
 
     # don't rotate if bender needs to translate away from a line
-    if state['state'] == LINE_FOLLOWING:
-        translation_threshhold = 60
-        rotation_throttle = 0
-        if np.absolute(translation) > translation_threshhold:
-            rotation = rotation * rotation_throttle
+    # if state['state'] == LINE_FOLLOWING:
+    #     translation_threshhold = 60
+    #     rotation_throttle = 0
+    #     if np.absolute(translation) > translation_threshhold:
+    #         rotation = rotation * rotation_throttle
     rolling_average.append((translation, rotation, state['state']))
     update_drivetrain(translation, rotation, state['speed'])
 

@@ -1,16 +1,11 @@
 import math
 
-import rospy
-from geometry_msgs.msg import PoseStamped
-from nav_msgs.msg import OccupancyGrid
-
-import topics
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
-from util import Vec2d, rx_subscribe, avg
+from util import Vec2d, avg
 
 ATTRACTOR_THRESHOLD_MM = 1500
-REPULSOR_THRESHOLD_MM = 1500
-R_GAIN = 2.0
+REPULSOR_THRESHOLD_MM = 1000
+R_GAIN = 1 / 1000.0
 
 NOISE_THRESHOLD = 3
 
@@ -40,18 +35,17 @@ def partition(vecs, cluster_mm):
     return map(avg, groups)
 
 
-def sum_repulsors(vecs, position, cluster_mm, weight):
+def sum_repulsors(vecs, cluster_mm, weight):
     if len(vecs) == 0:
         return Vec2d(0, 0)
 
     clusters = partition(vecs, cluster_mm)
-    return sum([calc_repulsive_force(r, position, weight) for r in clusters])
+    return avg([calc_repulsive_force(r, weight) for r in clusters])
 
 
-def calc_repulsive_force(repulsor, position, weight):
-    repulsor -= position
+def calc_repulsive_force(repulsor, weight):
     if repulsor.mag <= REPULSOR_THRESHOLD_MM:
-        f = R_GAIN * 2 ** (50 * repulsor.mag / REPULSOR_THRESHOLD_MM)  # quadratic
+        f = 0.5 * R_GAIN * (REPULSOR_THRESHOLD_MM - repulsor.mag) ** 2  # quadratic
         # f = R_GAIN * (1.0 / REPULSOR_THRESHOLD_MM - 1.0 / repulsor.mag) * 1.0 / (repulsor.mag ** 2)
         return repulsor.with_magnitude(abs(f * weight))
     else:
@@ -70,12 +64,13 @@ def trace_ray(grid, x, y, prob_threshold, angle):
         if grid[int(y)][int(x)] < prob_threshold:
             return math.sqrt((x - start_x) ** 2 + (y - start_y) ** 2)
         x += x_inc
-        y += y_inc
+        y -= y_inc
 
     return None
 
 
-def extract_repulsors(pose, grid):
+def extract_repulsors((x, y), grid):
+    pose = Vec2d.from_point(x, y)
     scale = (MAP_SIZE_PIXELS / 2.0) / (MAP_SIZE_METERS / 2.0)
     x = int((MAP_SIZE_PIXELS / 2.0) - pose.x * scale)
     y = int((MAP_SIZE_PIXELS / 2.0) - pose.y * scale)
@@ -84,28 +79,16 @@ def extract_repulsors(pose, grid):
     for i in xrange(360):
         ray = trace_ray(grid, x, y, 80, i)
         if ray is not None:
-            v = Vec2d(180-i, ray * 1000.0 / MAP_SIZE_PIXELS * MAP_SIZE_METERS)
+            v = Vec2d(i, ray * 1000.0 / MAP_SIZE_PIXELS * MAP_SIZE_METERS)
             repulsors.append(v)
 
     return repulsors
 
 
-def compute_potential((x, y), grid, goal):
-    pose = Vec2d.from_point(x, y)
+def compute_potential(repulsors, goal):
+    r = -sum_repulsors(repulsors, cluster_mm=150, weight=2)
+    # r = r.with_magnitude(min(10.0, r.mag))  # cap magnitude to something reasonable
+    print goal, r
+    return goal + r
 
-    repulsors = extract_repulsors(pose, grid)
-    r = sum_repulsors(repulsors, pose, cluster_mm=150, weight=2)
-    r = r.with_magnitude(min(1.0, r.mag))  # cap magnitude to something reasonable
-    # return r + goal
-    return goal
-
-def start():
-    rospy.init_node('potential_field')
-    pub = rospy.Publisher(topics.POTENTIAL_FIELD, PoseStamped, queue_size=1)
-
-    grid = rx_subscribe(topics.MAP, OccupancyGrid, parse=None)
-    pose = rx_subscribe(topics.MAP_POSE, PoseStamped, parse=None)
-    pose.with_latest_from(grid, compute_potential) \
-        .subscribe(pub.publish)
-
-    rospy.spin()
+    # return goal
