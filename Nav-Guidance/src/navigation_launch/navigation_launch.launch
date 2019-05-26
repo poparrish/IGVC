@@ -1,7 +1,7 @@
 <launch>
     <node name="cameras" pkg="navigation_launch" type="cameras.py" respawn="true" />
     <node name="gps" pkg="navigation_launch" type="gps.py" respawn="true" />
-    <node name="guidance" pkg="navigation_launch" type="guidance.py" respawn="true" />
+    <node name="guidance" pkg="navigation_launch" type="guidance.py" respawn="true" output="screen"/>
     <node name="TeensyWrite_node" pkg="navigation_launch" type="TeensyWrite_node.py" respawn="true" />
 <!--    <node name="compass_node" pkg="navigation_launch" type="compass_node.py" />-->
 

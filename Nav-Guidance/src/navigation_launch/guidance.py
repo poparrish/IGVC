@@ -16,7 +16,7 @@ import topics
 from guidance import compute_potential
 from guidance.attractor_placement import generate_path
 from guidance.gps_guidance import dist_to_waypoint, calculate_gps_heading
-from guidance.potential_field import extract_repulsors
+from guidance.potential_field import extract_repulsors, ATTRACTOR_THRESHOLD_MM
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from util import Vec2d, avg, to180
 from util.rosutil import extract_tf, rx_subscribe
@@ -207,7 +207,9 @@ def update_control((gps, costmap, pose, line_angle, state)):
     map_rotation = map_pose.transform.rotation.z
     diff_rotation = math.degrees(rotation - map_rotation)
 
-    path = generate_path(costmap.map_bytes, diff_rotation, diff)
+    map_bytes = costmap.map_bytes
+    path = generate_path(map_bytes, diff_rotation, diff)
+    repulsors = []
     if path is None:
         path = []
     path_debug.publish(
@@ -221,15 +223,15 @@ def update_control((gps, costmap, pose, line_angle, state)):
     if state['state'] == LINE_FOLLOWING:
         offset = 5
         if len(path) < offset + 1:
-            goal = Vec2d(0, 1)  # always drive forward
+            goal = Vec2d(0, ATTRACTOR_THRESHOLD_MM)  # always drive forward
         else:
             point = path[offset]
             goal = Vec2d.from_point(x_to_m(point[0] + 0.5), y_to_m(point[1] + 0.5))
+            goal = goal.with_magnitude(ATTRACTOR_THRESHOLD_MM)
         rotation = line_angle.data  # rotate to follow lines
         if abs(rotation) < 10:
             rotation = 0
 
-        goal = Vec2d(0, 1)  # always drive forward
         rotation /= 1.0
 
     else:

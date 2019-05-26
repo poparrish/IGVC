@@ -7,7 +7,7 @@
 
 import math
 
-from a_star import find_path, grid_neighbors
+from a_star import find_path, grid_neighbors, euclidean
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from util import Vec2d
 
@@ -41,6 +41,10 @@ def y_to_pixel(m):
 def generate_path(costmap, heading, (x, y)):
     valid_edges = set([e for e in edge_point() if navigable_edge_point(e, heading)])
 
+    ideal = Vec2d.from_point(math.cos(heading) * CIRCLE_RADIUS / 2 + MAP_SIZE_PIXELS / 2.0,
+                             math.sin(heading) * CIRCLE_RADIUS / 2 + MAP_SIZE_PIXELS / 2.0)
+    print ideal
+
     def is_goal(p):
         return p in valid_edges
 
@@ -50,8 +54,6 @@ def generate_path(costmap, heading, (x, y)):
             return float('inf')
 
         if is_goal((x, y)):
-            ideal = Vec2d.from_point(math.cos(heading) * CIRCLE_RADIUS / 2 + MAP_SIZE_PIXELS / 2.0,
-                                     math.sin(heading) * CIRCLE_RADIUS / 2 + MAP_SIZE_PIXELS / 2.0)
             return (ideal - Vec2d.from_point(x, y)).mag
 
         return 1
@@ -63,6 +65,7 @@ def generate_path(costmap, heading, (x, y)):
     path = find_path(start=(x, y),
                      reached_goal=is_goal,
                      neighbors=grid_neighbors(costmap, jump_size=SPACING),
-                     weight=weight)
+                     weight=weight,
+                     heuristic=lambda v: euclidean(v, (ideal.x, ideal.y)))
 
     return path

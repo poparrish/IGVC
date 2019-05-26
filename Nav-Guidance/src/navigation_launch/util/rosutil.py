@@ -1,20 +1,13 @@
 import pickle
-from concurrent.futures import ThreadPoolExecutor
 
 import rospy
 from rx import Observable
-from rx.subjects import ReplaySubject, Subject
+from rx.subjects import ReplaySubject
 from std_msgs.msg import String
 
 
 def unpickle(msg):
     return pickle.loads(msg.data)
-
-
-def with_backpressure(fn):
-    executor = ThreadPoolExecutor(max_workers=1)
-
-    pass
 
 
 # TODO: Get rid of parse...

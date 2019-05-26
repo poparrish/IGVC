@@ -717,7 +717,7 @@ def start():
                                     deltaMetersTraveled[3]) / 4
 
             #flip x and y
-            fTotalX = -totalX
+            fTotalX = totalX
             fTotalY = totalY
             print "fTotalX: ",fTotalX
             print "fTotalY: ",fTotalY

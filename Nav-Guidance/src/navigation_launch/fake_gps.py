@@ -13,7 +13,7 @@ if __name__ == '__main__':
 
     msg = pickle.dumps({'lat': 0,
                         'lon': 0,
-                        'heading': 0,
+                        'heading': 10,
                         'satellites': 5,
                         'fixed': True})
 

@@ -4,10 +4,12 @@ from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from util import Vec2d, avg
 
 ATTRACTOR_THRESHOLD_MM = 1500
-REPULSOR_THRESHOLD_MM = 1000
-R_GAIN = 1 / 1000.0
+REPULSOR_THRESHOLD_MM = 1500
 
-NOISE_THRESHOLD = 3
+R_FACTOR = 1.0 / (400 ** 2)  # 750 is the distance at which the repulsors should start to overpower the attractors
+A_FACTOR = 25.0 / (1500 ** 2)  # dumb hack to ensure 25
+
+NOISE_THRESHOLD = 5
 
 
 def partition(vecs, cluster_mm):
@@ -35,22 +37,40 @@ def partition(vecs, cluster_mm):
     return map(avg, groups)
 
 
-def sum_repulsors(vecs, cluster_mm, weight):
-    if len(vecs) == 0:
-        return Vec2d(0, 0)
+def calc_attractive_force(attractor, position):
+    attractor -= position
 
-    clusters = partition(vecs, cluster_mm)
-    return avg([calc_repulsive_force(r, weight) for r in clusters])
+    mag = min(attractor.mag, ATTRACTOR_THRESHOLD_MM)  # don't change scaling unless we're really close
+    f = 0.5 * A_FACTOR * mag ** 2  # quadratic
+    return attractor.with_magnitude(f)
 
 
-def calc_repulsive_force(repulsor, weight):
+def calc_repulsive_force(repulsor, position, weight):
+    repulsor -= position
     if repulsor.mag <= REPULSOR_THRESHOLD_MM:
-        f = 0.5 * R_GAIN * (REPULSOR_THRESHOLD_MM - repulsor.mag) ** 2  # quadratic
-        # f = R_GAIN * (1.0 / REPULSOR_THRESHOLD_MM - 1.0 / repulsor.mag) * 1.0 / (repulsor.mag ** 2)
-        return repulsor.with_magnitude(abs(f * weight))
+        f = 0.5 * R_FACTOR * (REPULSOR_THRESHOLD_MM - repulsor.mag) ** 2  # quadratic
     else:
         f = 0  # out of range
-        return repulsor.with_magnitude(0)
+
+    return repulsor.with_magnitude(f * weight)
+
+
+zero = Vec2d(0, 0)
+
+
+def sum_repulsors(vecs, position, cluster_mm, weight):
+    if len(vecs) == 0:
+        return zero
+
+    clusters = partition(vecs, cluster_mm)
+    return sum([calc_repulsive_force(r, position, weight) for r in clusters])
+
+
+def compute_potential(repulsors, goal, position=zero):
+    a = calc_attractive_force(goal, position)
+    r = sum_repulsors(repulsors, zero, cluster_mm=150, weight=2)
+    print a, r
+    return a - r
 
 
 def trace_ray(grid, x, y, prob_threshold, angle):
@@ -70,7 +90,7 @@ def trace_ray(grid, x, y, prob_threshold, angle):
 
 
 def extract_repulsors((x, y), grid):
-    pose = Vec2d.from_point(x, y)
+    pose = zero
     scale = (MAP_SIZE_PIXELS / 2.0) / (MAP_SIZE_METERS / 2.0)
     x = int((MAP_SIZE_PIXELS / 2.0) - pose.x * scale)
     y = int((MAP_SIZE_PIXELS / 2.0) - pose.y * scale)
@@ -83,12 +103,3 @@ def extract_repulsors((x, y), grid):
             repulsors.append(v)
 
     return repulsors
-
-
-def compute_potential(repulsors, goal):
-    r = -sum_repulsors(repulsors, cluster_mm=150, weight=2)
-    # r = r.with_magnitude(min(10.0, r.mag))  # cap magnitude to something reasonable
-    print goal, r
-    return goal + r
-
-    # return goal

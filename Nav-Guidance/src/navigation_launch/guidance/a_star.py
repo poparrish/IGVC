@@ -57,7 +57,7 @@ def reconstruct_path(came_from, current):
     return path
 
 
-def find_path(start, reached_goal, neighbors, weight, heuristic=euclidean):
+def find_path(start, reached_goal, neighbors, weight, heuristic=lambda x: 0):
     closed_set = set()
     open_set = PrioritySet([(0, start)])
 
@@ -84,7 +84,7 @@ def find_path(start, reached_goal, neighbors, weight, heuristic=euclidean):
                 closed_set.add(neighbor)
                 continue
 
-            s = score[current] + heuristic(current, neighbor) + weight(neighbor)
+            s = score[current] + heuristic(current) + weight(neighbor)
             if neighbor not in open_set:
                 open_set.push((s, neighbor))
             elif s >= score[neighbor]:

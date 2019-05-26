@@ -13,7 +13,7 @@ from map_msg import MapData
 from mapping import MAP_SIZE_METERS, MAP_SIZE_PIXELS
 from util import rx_subscribe
 
-COSTMAP_DILATION_M = 0.3  # closest distance to obstacles pathfinding is allowed to get
+COSTMAP_DILATION_M = 0.5  # closest distance to obstacles pathfinding is allowed to get
 
 
 def build_costmap(map_data):
@@ -21,11 +21,12 @@ def build_costmap(map_data):
     dilation = int(float(COSTMAP_DILATION_M) / MAP_SIZE_METERS * MAP_SIZE_PIXELS)
     kernel = np.ones((dilation, dilation), np.uint8)
     img = map_data.map_bytes
+    ret, img = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)
     img = cv2.bitwise_not(img)
     img = cv2.dilate(img, kernel, iterations=1)
     img = cv2.bitwise_not(img)
+    cv2.circle(img, (MAP_SIZE_PIXELS / 2, MAP_SIZE_PIXELS / 2), dilation / 2, (255,), -1)
 
-    ret, img = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)
     return MapData(transform=map_data.transform,
                    map_data=img)
 
@@ -46,7 +47,7 @@ def start():
     lidar_map = rx_subscribe(topics.MAP, String)
     camera_map = rx_subscribe(topics.LANE_MAP, String)
     lidar_map.combine_latest(camera_map, lambda l, c: (l, c)) \
-        .throttle_first(200) \
+        .throttle_first(250) \
         .subscribe(publish_costmap)
 
     rospy.spin()
