@@ -2,7 +2,7 @@
 import rospy
 
 import topics
-from mapping import publish_map, MapPublisher, create_map
+from mapping import publish_map, MapPublisher, create_map, MAXED
 
 
 def start_mapping():
@@ -10,7 +10,8 @@ def start_mapping():
 
     lidar_map = create_map(detection_angle_degrees=270, detection_margin=5)
     publish_map(MapPublisher(lidar_map, topics.MAP, tf_frame=topics.MAP_FRAME),
-                topic=topics.LIDAR)
+                topic=topics.LIDAR,
+                process_msg=lambda msg: MAXED + msg)
 
     rospy.spin()
 

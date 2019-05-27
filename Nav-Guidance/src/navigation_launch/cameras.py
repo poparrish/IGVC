@@ -483,19 +483,19 @@ if __name__ == '__main__':
     ihighV = 255
 
     #poolnoodle
-    ilowH = 45
-    ihighH = 76
-    ilowS = 28
-    ihighS = 156
-    ilowV = 160
-    ihighV = 252
+    # ilowH = 45
+    # ihighH = 76
+    # ilowS = 28
+    # ihighS = 156
+    # ilowV = 160
+    # ihighV = 252
 
-    # ilowH = 30
-    # ihighH = 96
-    # ilowS = 14
-    # ihighS = 61
-    # ilowV = 173
-    # ihighV = 255
+    ilowH = 18
+    ihighH = 89
+    ilowS = 0
+    ihighS = 116
+    ilowV = 60
+    ihighV = 183
 
 
     cv2.createTrackbar('lowH', 'img_HSV', ilowH, 255, callback)
