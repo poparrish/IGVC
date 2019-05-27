@@ -641,9 +641,11 @@ def start():
 
     lastTrain = []
 
-    compass_calibrated = True
-    compass_home = 0
-
+    try:
+        compass_calibrated = True
+        compass_home = compass['heading']#we are assuming that the very first reading we get from PIXHAWK is good
+    except:
+        rospy.loginfo("no compass data published")
     while not rospy.is_shutdown():
         try:
             #READ/WRITE data to Teensy
@@ -725,10 +727,10 @@ def start():
 
 
 
-            if compass['heading'] !=0 and compass_calibrated==False:#first pass, relies on 0 init
-                compass_calibrated = True
-                compass_home = compass['heading']
-            elif compass_calibrated == True:
+            # if compass['heading'] !=0 and compass_calibrated==False:#first pass, relies on 0 init
+            #     compass_calibrated = True
+            #     compass_home = compass['heading']
+            if compass_calibrated == True:
                 br.sendTransform((fTotalY, fTotalX, 0),
                                  tf.transformations.quaternion_from_euler(int(compass['heading']), 0, 0),
                                  # (0,0,0,1),
