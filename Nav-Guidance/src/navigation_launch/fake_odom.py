@@ -10,23 +10,18 @@ def start():
     rospy.init_node('fake_odom')
     br = tf.TransformBroadcaster()
     rate = rospy.Rate(10)
-    i = 0
+    x = 0
+    heading = 0
     while not rospy.is_shutdown():
         br.sendTransform(
-            translation=(i, 0, 0),
-            rotation=quaternion_from_euler(0, 0, 0),
+            translation=(0.4, 0.45, 0),
+            rotation=quaternion_from_euler(0, 0, heading),
             time=rospy.Time.now(),
             child=topics.ODOMETRY_FRAME,
             parent=topics.WORLD_FRAME
         )
-        i += .03
-        # br.sendTransform(
-        #     translation=(1.5 + i * 2, 1, 0),
-        #     rotation=quaternion_from_euler(0, 0, 1),
-        #     time=rospy.Time.now(),
-        #     child=topics.MAP_FRAME,
-        #     parent=topics.WORLD_FRAME
-        # )
+        x += .01
+        # heading += 0.01
         rate.sleep()
 
 

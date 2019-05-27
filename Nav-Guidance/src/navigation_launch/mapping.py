@@ -50,8 +50,10 @@ class MapPublisher:
 
     def update(self, update):
         self.map.update(update)
-        self.point_cloud_pub.publish(PointCloud(header=Header(frame_id='map'),
-                                                points=[Point32(x=v.x / 1000.0, y=v.y / 1000.0) for v in update.scan]))
+        self.point_cloud_pub.publish(PointCloud(header=Header(frame_id=topics.ODOMETRY_FRAME),
+                                                points=[Point32(x=v.x / 1000.0, y=v.y / 1000.0)
+                                                        for v in update.scan
+                                                        if self.map.in_range(v.angle)]))
         self.publish()
 
 

@@ -2,11 +2,9 @@
 import math
 import traceback
 
-import numpy as np
 import rospy
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, TransformStamped, Transform, Point32
 from nav_msgs.msg import Path
-from rx.concurrency import ThreadPoolScheduler
 from sensor_msgs.msg import PointCloud
 from std_msgs.msg import String, Header, Int16
 from tf.transformations import quaternion_from_euler
@@ -28,7 +26,7 @@ GUIDANCE_HZ = 10
 # Drivetrain
 #
 
-INITIAL_SPEED = .75  # gotta go FAST
+INITIAL_SPEED = 1  # gotta go FAST
 INITIAL_DISTANCE_CUTOFF = 5000  # slow down once we're within 5m of something
 
 NORMAL_SPEED = .5  # forward speed in m/s
@@ -207,9 +205,8 @@ def update_control((gps, costmap, pose, line_angle, state)):
     map_rotation = map_pose.transform.rotation.z
     diff_rotation = math.degrees(rotation - map_rotation)
 
-    map_bytes = costmap.map_bytes
-    path = generate_path(map_bytes, diff_rotation, diff)
-    repulsors = []
+    path = generate_path(costmap.costmap_bytes, diff_rotation, diff)
+
     if path is None:
         path = []
     path_debug.publish(
@@ -245,7 +242,7 @@ def update_control((gps, costmap, pose, line_angle, state)):
     # calculate translation based on obstacles
     repulsors = extract_repulsors(diff, costmap.map_bytes)
     potential = compute_potential(repulsors, goal)
-    obstacle_debug.publish(PointCloud(header=Header(frame_id='map'),
+    obstacle_debug.publish(PointCloud(header=Header(frame_id=topics.ODOMETRY_FRAME),
                                       points=[Point32(x=v.x / 1000.0, y=v.y / 1000.0) for v in repulsors]))
     translation = to180(potential.angle)
 
@@ -291,7 +288,7 @@ def main():
 
     pos.combine_latest(state, gps, costmap, line_angle,
                        lambda o, s, g, m, a: (g, m, o, a, s)) \
-        .throttle_last(250) \
+        .throttle_last(100) \
         .subscribe(on_next=update_control,
                    on_error=lambda e: rospy.logerr(traceback.format_exc(e)))
 

@@ -1,5 +1,7 @@
 import math
 
+from costmap import COSTMAP_DILATION_M
+from map import UNKNOWN
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from util import Vec2d, avg
 
@@ -47,7 +49,7 @@ def calc_attractive_force(attractor, position):
 
 def calc_repulsive_force(repulsor, position, weight):
     repulsor -= position
-    if repulsor.mag <= REPULSOR_THRESHOLD_MM:
+    if repulsor.mag <= 1000:
         f = 0.5 * R_FACTOR * (REPULSOR_THRESHOLD_MM - repulsor.mag) ** 2  # quadratic
     else:
         f = 0  # out of range
@@ -81,7 +83,8 @@ def trace_ray(grid, x, y, prob_threshold, angle):
     start_y = y
 
     while 0 <= int(x) < MAP_SIZE_PIXELS and 0 <= int(y) < MAP_SIZE_PIXELS:
-        if grid[int(y)][int(x)] < prob_threshold:
+        val = grid[int(y)][int(x)]
+        if val < prob_threshold and val != UNKNOWN:
             return math.sqrt((x - start_x) ** 2 + (y - start_y) ** 2)
         x += x_inc
         y -= y_inc
@@ -90,9 +93,9 @@ def trace_ray(grid, x, y, prob_threshold, angle):
 
 
 def extract_repulsors((x, y), grid):
-    pose = zero
+    pose = Vec2d.from_point(x, y)
     scale = (MAP_SIZE_PIXELS / 2.0) / (MAP_SIZE_METERS / 2.0)
-    x = int((MAP_SIZE_PIXELS / 2.0) - pose.x * scale)
+    x = int((MAP_SIZE_PIXELS / 2.0) + pose.x * scale)
     y = int((MAP_SIZE_PIXELS / 2.0) - pose.y * scale)
 
     repulsors = []
