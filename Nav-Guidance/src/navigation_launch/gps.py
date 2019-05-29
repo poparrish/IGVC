@@ -39,7 +39,8 @@ def get_location(mav):
                 'satellites': raw.satellites_visible,
                 'heading': int(pos.hdg/100),#just whole #'s
                 'fixed': raw.fix_type >= GPS_FIX_TYPE_3D_FIX,
-                'pitch': int(np.rad2deg(attitude.pitch))}
+                'pitch': int(np.rad2deg(attitude.pitch)),
+                'roll': int(np.rad2deg(attitude.roll))}
     return None
 
 

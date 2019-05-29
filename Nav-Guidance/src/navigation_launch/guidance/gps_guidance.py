@@ -27,3 +27,11 @@ def calculate_gps_heading(loc, waypoint):
     angle = initial_bearing((loc['lat'], loc['lon']), waypoint) - loc['heading']
 
     return Vec2d(angle, dist)
+
+def current_angle(loc):
+    """just returns the current angle from pixhawk"""
+    return loc['pitch']
+
+def current_roll(loc):
+    """just returns the current roll from pixhawk"""
+    return loc['roll']
