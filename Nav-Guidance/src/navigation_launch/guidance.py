@@ -27,6 +27,7 @@ GUIDANCE_HZ = 10
 #
 
 INITIAL_SPEED = 1  # gotta go FAST
+
 INITIAL_DISTANCE_CUTOFF = 5000  # slow down once we're within 5m of something
 
 NORMAL_SPEED = .5  # forward speed in m/s
@@ -51,6 +52,7 @@ GPS_BUFFER = 5  # buffer GPS messages to help with accuracy
 
 FIRST_WAYPOINT_TOLERANCE = 1  # when to start tracking the first waypoint
 WAYPOINT_TOLERANCE = .5  # precision in meters
+RAMP_INCLINE_TOLERANCE=5# how many degrees of incline before we switch states
 
 WAYPOINTS = [
     # (43.600314, -116.197164),  # N/W corner of field
@@ -102,8 +104,20 @@ def reached_waypoint(num, gps_buffer, tolerance):
     waypoint = WAYPOINTS[num]
     distance = avg([dist_to_waypoint(loc, waypoint) for loc in gps_buffer])
     # state_debug.publish(str(distance))
+
     return distance < tolerance
 
+def going_up(gps_buffer,tolerance):
+    angle = avg([current_angle(loc) for loc in gps_buffer])
+    return angle > tolerance
+
+def going_down(gps_buffer,tolerance):
+    angle = avg([current_angle(loc) for loc in gps_buffer])
+    return angle < tolerance*-1
+
+def going_flat(gps_buffer,tolerance):
+    angle = avg([current_angle(loc) for loc in gps_buffer])
+    return (angle < tolerance and angle > tolerance*-1)
 
 #
 # State machine
@@ -111,6 +125,15 @@ def reached_waypoint(num, gps_buffer, tolerance):
 
 LINE_FOLLOWING = 'LINE_FOLLOWING'
 WAYPOINT_TRACKING = 'WAYPOINT_TRACKING'
+
+TRACKING_FIRST_WAYPOINT ='TRACKING_FIRST_WAYPOINT'#this can be beginning and end state
+TRACKING_SECOND_WAYPOINT = 'TRACKING_SECOND_WAYPOINT'
+TRACKING_THIRD_WAYPOINT = 'TRACKING_THIRD_WAYPOINT'
+TRACKING_FOURTH_WAYPOINT = 'TRACKING_FOURTH_WAYPOINT'
+CLIMBING_UP = 'CLIMBING_UP'
+CLIMBING_DOWN = 'CLIMBING_DOWN'
+
+
 
 DEFAULT_STATE = {
     'state': LINE_FOLLOWING,
@@ -142,38 +165,136 @@ def compute_next_state(state, gps_buffer):
     #         speed = NORMAL_SPEED
     #         state['speed'] = speed
 
-    if state['state'] == LINE_FOLLOWING:
-
-        # if we're within range of the first waypoint, start tracking it
-        if reached_waypoint(0, gps_buffer, tolerance=FIRST_WAYPOINT_TOLERANCE):
-            rospy.loginfo('Begin tracking first waypoint')
+    if state['state'] == TRACKING_FIRST_WAYPOINT:
+        if reached_waypoint(1, gps_buffer, tolerance=FIRST_WAYPOINT_TOLERANCE):
+            rospy.loginfo('Begin tracking second waypoint')
             return {
-                'state': WAYPOINT_TRACKING,
+                'state': TRACKING_SECOND_WAYPOINT,
                 'speed': state['speed'],
-                'tracking': 0
+                'tracking': 2
+            }
+        else:
+            return {
+                'state': TRACKING_FIRST_WAYPOINT,
+                'speed': state['speed'],
+                'tracking': 1
             }
 
-    if state['state'] == WAYPOINT_TRACKING:
-        tracking = state['tracking']
-
-        # if we've reached the current waypoint, start tracking the next one
-        if reached_waypoint(tracking, gps_buffer, tolerance=WAYPOINT_TOLERANCE):
-
-            # ... unless we are at the last one, in which case we should resume normal navigation
-            if tracking == len(WAYPOINTS) - 1:
-                rospy.loginfo('Reached all waypoints, resuming normal operation')
-                return {
-                    'state': LINE_FOLLOWING,
-                    'speed': state['speed'],
-                }
-
-            next = tracking + 1
-            rospy.loginfo('Begin tracking waypoint %s', next)
+    if state['state'] == TRACKING_SECOND_WAYPOINT:
+        if reached_waypoint(2, gps_buffer, tolerance=WAYPOINT_TOLERANCE):
+            rospy.loginfo('Begin tracking third waypoint')
             return {
-                'state': WAYPOINT_TRACKING,
+                'state': TRACKING_THIRD_WAYPOINT,
                 'speed': state['speed'],
-                'tracking': next
+                'tracking': 3
             }
+        elif going_up(gps_buffer,tolerance= RAMP_INCLINE_TOLERANCE):
+            rospy.loginfo('Begin climbing the ramp')
+            return {
+                'state': CLIMBING_UP,
+                'speed': state['speed'],
+                'tracking': 3
+            }
+        else:
+            return {
+                'state': TRACKING_SECOND_WAYPONT,
+                'speed': state['speed'],
+                'tracking': 2
+            }
+
+    #NOTE AFTER WE FINISH CLIMBING DOWN, WE LOOP BACK TO TRACKING_THIRD_WAYPOINT
+    if state['state'] == CLIMBING_UP:
+        if going_down(gps_buffer,tolerance=RAMP_INCLINE_TOLERANCE):
+            rospy.loginfo('Begin climbing down ramp')
+            return {
+                'state': CLIMBING_DOWN,
+                'speed': state['speed'],
+                'tracking': 3
+            }
+        else:
+            return {
+                'state': CLIMBING_UP,
+                'speed': state['speed'],
+                'tracking': 3
+            }
+
+    if state['state'] == CLIMBING_DOWN:
+        if going_flat(gps_buffer,tolerance=RAMP_INCLINE_TOLERANCE):
+            rospy.loginfo('Begin following lines')
+            return {
+                'state': TRACKING_THIRD_WAYPOINT,
+                'speed': state['speed'],
+                'tracking': 3
+            }
+        else:
+            return {
+                'state': CLIMBING_UP,
+                'speed': state['speed'],
+                'tracking': 3
+            }
+
+    if state['state'] == TRACKING_THIRD_WAYPOINT:
+        if reached_waypoint(3, gps_buffer, tolerance=WAYPOINT_TOLERANCE):
+            rospy.loginfo('Begin tracking second waypoint')
+            return {
+                'state': TRACKING_FOURTH_WAYPOINTA,
+                'speed': state['speed'],
+                'tracking': 4
+            }
+        else:
+            return {
+                'state': TRACKING_THIRD_WAYPOINT,
+                'speed': state['speed'],
+                'tracking': 1
+            }
+
+    if state['state'] == TRACKING_FOURTH_WAYPOINT:
+        if reached_waypoint(4, gps_buffer, tolerance=WAYPOINT_TOLERANCE):
+            rospy.loginfo('Begin tracking second waypoint')
+            return {
+                'state': TRACKING_FIRST_WAYPOINT,
+                'speed': state['speed'],
+                'tracking': 1
+            }
+        else:
+            return {
+                'state': TRACKING_FOURTH_WAYPOINT,
+                'speed': state['speed'],
+                'tracking': 4
+            }
+
+    # if state['state'] == LINE_FOLLOWING:
+    #
+    #     # if we're within range of the first waypoint, start tracking it
+    #     if reached_waypoint(0, gps_buffer, tolerance=FIRST_WAYPOINT_TOLERANCE):
+    #         rospy.loginfo('Begin tracking first waypoint')
+    #         return {
+    #             'state': WAYPOINT_TRACKING,
+    #             'speed': state['speed'],
+    #             'tracking': 0
+    #         }
+    #
+    # if state['state'] == WAYPOINT_TRACKING:
+    #     tracking = state['tracking']
+    #
+    #     # if we've reached the current waypoint, start tracking the next one
+    #     if reached_waypoint(tracking, gps_buffer, tolerance=WAYPOINT_TOLERANCE):
+    #
+    #         # ... unless we are at the last one, in which case we should resume normal navigation
+    #         if tracking == len(WAYPOINTS) - 1:
+    #             rospy.loginfo('Reached all waypoints, resuming normal operation')
+    #             return {
+    #                 'state': LINE_FOLLOWING,
+    #                 'speed': state['speed'],
+    #             }
+    #
+    #         next = tracking + 1
+    #         rospy.loginfo('Begin tracking waypoint %s', next)
+    #         return {
+    #             'state': WAYPOINT_TRACKING,
+    #             'speed': state['speed'],
+    #             'tracking': next
+    #         }
 
     return state
 
@@ -230,6 +351,9 @@ def update_control((gps, costmap, pose, line_angle, state)):
             rotation = 0
 
         rotation /= 1.0
+
+    elif state['state'] == RAMP_CLIMBING:
+        pass
 
     else:
         # FIXME
