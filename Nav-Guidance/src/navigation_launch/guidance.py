@@ -165,6 +165,7 @@ def compute_next_state(state, gps_buffer):
     #         speed = NORMAL_SPEED
     #         state['speed'] = speed
 
+    rospy.loginfo(state)
     if state['state'] == TRACKING_FIRST_WAYPOINT:
         if reached_waypoint(1, gps_buffer, tolerance=FIRST_WAYPOINT_TOLERANCE):
             rospy.loginfo('Begin tracking second waypoint')
@@ -319,8 +320,6 @@ def update_control((gps, costmap, pose, line_angle, state)):
     transform = pose.transform.translation
     map_transform = map_pose.transform.translation
     diff = transform.x - map_transform.x, transform.y - map_transform.y
-    print map_transform.x, map_transform.y
-    print transform.x, transform.y
 
     rotation = pose.transform.rotation.z
     map_rotation = map_pose.transform.rotation.z
@@ -367,7 +366,7 @@ def update_control((gps, costmap, pose, line_angle, state)):
                                       points=[Point32(x=v.x / 1000.0, y=v.y / 1000.0) for v in repulsors]))
     translation = to180(potential.angle)
 
-    rospy.loginfo('translation = %s, rotation = %s, speed = %s', translation, rotation, state['speed'])
+    # rospy.loginfo('translation = %s, rotation = %s, speed = %s', translation, rotation, state['speed'])
 
     # don't rotate if bender needs to translate away from a line
     # if state['state'] == LINE_FOLLOWING:
