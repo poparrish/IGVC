@@ -19,6 +19,7 @@ import time
 #currently compass data comes from an arduino publishing to the compass topic. see compass_node.py
 #odometry filters are a work in progress but those are also configurable from the main loop
 import topics
+from util import to180
 
 ser = serial.Serial('/dev/teensy', 250000,timeout=.1,writeTimeout=.1)
 Hz = 30
@@ -282,28 +283,6 @@ def rpm_to_mps(current_RPM):
         current_mps[i]=(current_RPM_list[i]*0.638048)/60
     return current_mps
 
-def invert(angle,range):
-    return range-angle
-
-def convert_360_to_180(compass):
-    if compass > 179:
-        modified_compass = compass
-        print 'modified_comp: ',modified_compass
-        modified_compass=invert(modified_compass,360)
-    else:
-        modified_compass=compass*-1
-    return modified_compass
-
-def wrap_pos_neg_180(VelocityVector):
-    normalized_angle=VelocityVector
-    if VelocityVector > 180:#make neg
-        normalized_angle=360-VelocityVector
-    if VelocityVector < -180:#make pos
-        normalized_angle = 360-VelocityVector
-    if VelocityVector == -180:
-        print '3'
-        normalized_angle=180
-    return normalized_angle
 
 def calculate_delta_odometry(deltaMetersTraveled,currentAngle):
     """
@@ -318,118 +297,21 @@ def calculate_delta_odometry(deltaMetersTraveled,currentAngle):
     global compass_home
     global compass
     print 'compass',compass
-    imu_angle=convert_360_to_180(compass['heading'])
+    imu_angle=to180(compass['heading'])
     print "imu_angle: ",imu_angle
 
-    xtranslationComponent=0.0#meters
-    ytranslationComponent=0.0#meters
-    VelocityVector=0.0#radians
     avgDeltaMetersTraveled = (deltaMetersTraveled[0] + deltaMetersTraveled[1] + deltaMetersTraveled[2] +
                               deltaMetersTraveled[3]) / 4
 
     VelocityVector = (currentAngle[0] + currentAngle[1] + currentAngle[2] + currentAngle[3]) / 4
 
-    # rotation_speed = {
-    #     0: float(0),
-    #     1: float(0),
-    #     2: float(0),
-    #     3: float(0)
-    # }
-    # ground_speed = {
-    #     0: float(0),
-    #     1: float(0),
-    #     2: float(0),
-    #     3: float(0)
-    # }
-    # wheel_psi = {
-    #     0: float(45),
-    #     1: float(135),
-    #     2: float(-135),
-    #     3: float(-45)
-    # }
-    # sup_angle = {
-    #     0: float(0),
-    #     1: float(0),
-    #     2: float(0),
-    #     3: float(0)
-    # }
-    # delta_theta = {
-    #     0: float(0),
-    #     1: float(0),
-    #     2: float(0),
-    #     3: float(0)
-    # }
-    # current_MPS = {
-    #     0: float(0),
-    #     1: float(0),
-    #     2: float(0),
-    #     3: float(0)
-    # }
-    #
-    # for i in range(0,4):
-    #     current_MPS[i] = deltaMetersTraveled[i]*30
-    # print "current MPS: ",current_MPS
-    #
-    # for i in range(0,4):
-    #     rotation_speed[i]=VelocityVector-currentAngle[i]
-    #
-    # for i in range(0,4):
-    #     if (rotation_speed[i] < 0):
-    #         angle_vv_rot = wheel_psi[i] - VelocityVector - 90
-    #     else:
-    #         angle_vv_rot = wheel_psi[i] - VelocityVector + 90
-    #     sup_angle[i] = 180 - angle_vv_rot
-    #
-    #     if (sup_angle[i] > 180):
-    #         sup_angle[i] = sup_angle[i] - 360
-    #     if (sup_angle[i] < -180):
-    #         sup_angle[i] = sup_angle[i] + 360
-    #
-    #     if current_MPS[i] == 0:
-    #         delta_theta[i] = 0
-    #     else:
-    #         delta_theta[i] = math.asin((math.sin(np.deg2rad(sup_angle[i])) * rotation_speed[i]) / current_MPS[i])
-    #
-    #
-    # for i in range(0,4):
-    #     ground_speed[i]= rotation_speed[i]*rotation_speed[i]+current_MPS[i]*current_MPS[i]-2*rotation_speed[i]*current_MPS[i]*math.cos(np.deg2rad(180-delta_theta[i]+sup_angle[i]))
-
     #normalize tranlsation vector
     VelocityVector+=imu_angle
     print "Velocity_Vector, ",VelocityVector
-    imu_frame_VelocityVector=wrap_pos_neg_180(VelocityVector)
+    imu_frame_VelocityVector=to180(VelocityVector)
     xtranslationComponent = math.sin(np.deg2rad(imu_frame_VelocityVector)) * avgDeltaMetersTraveled
     ytranslationComponent = math.cos(np.deg2rad(imu_frame_VelocityVector)) * avgDeltaMetersTraveled
 
-
-    # print "GROUND SPEED: ",ground_speed
-    # print "VELOCITYVECTOR: ",VelocityVector
-    # if steering_state["point_turn"] == True:
-    #     print "undefined_odom_state"
-    # elif steering_state["translation"] == True:#this also includes driving straight since we're translating straight
-    #     VelocityVector=(currentAngle[0]+currentAngle[1]+currentAngle[2]+currentAngle[3])/4
-    #     VelocityVector=np.deg2rad(VelocityVector)
-    #     xtranslationComponent=math.sin(VelocityVector)*avgDeltaMetersTraveled
-    #     ytranslationComponent=math.cos(VelocityVector)*avgDeltaMetersTraveled
-    #     print "translation"
-    # elif steering_state["regular_turn"] == True:
-    #     #Idea here is to assume that translation is along the 0 degree line. This imaginary line is going to be tangent
-    #     #to the circle traced by our turn radius. Knowing that, we can draw a triangle that represents the start+end point
-    #     #of deltaMetersTraveled with the base being along the imaginary line and the angle between the base, center origin
-    #     #point of Bender, and the hypotenuse which will be the actual distance traveled
-    #     #average the angle of the first and second "axles" just find the mirror reflection after translation is subtracted out
-    #     avgAngleFirstAxle=(currentAngle[0]+currentAngle[3])/2
-    #     avgAngleSecondAxle=(currentAngle[1]+currentAngle[2])/2
-    #     #again assume we are driving straight so just average them and ignore error
-    #     avgTangentAngle=(avgAngleFirstAxle+avgAngleSecondAxle)/2
-    #     avgTangentAngle=np.deg2rad(avgTangentAngle)
-    #     xtranslationComponent = math.sin(VelocityVector) * avgDeltaMetersTraveled
-    #     ytranslationComponent = math.cos(VelocityVector) * avgDeltaMetersTraveled
-    #     print "regular_turn"
-    # elif steering_state["translation_and_rotation"] == True:
-    #     print "undefined_odom_state"
-    # else:#not moving
-    #     print "not_moving"
     return xtranslationComponent,ytranslationComponent
 
 def vector_callback(vector):
@@ -732,8 +614,8 @@ def start():
             #     compass_home = compass['heading']
             if compass_calibrated == True:
                 br.sendTransform((fTotalY, fTotalX, 0),
-                                 tf.transformations.quaternion_from_euler(0, 0, 0),
-                                 # (0,0,0,1),
+                                 # tf.transformations.quaternion_from_euler(0, 0, np.deg2rad(compass['heading'])),
+                                 (0, 0, 0, 1),
                                  rospy.Time.now(),
                                  topics.ODOMETRY_FRAME,
                                  topics.WORLD_FRAME)
