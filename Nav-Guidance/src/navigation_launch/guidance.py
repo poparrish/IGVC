@@ -13,7 +13,7 @@ from tf2_msgs.msg import TFMessage
 import topics
 from guidance import compute_potential
 from guidance.attractor_placement import generate_path
-from guidance.gps_guidance import dist_to_waypoint, calculate_gps_heading
+from guidance.gps_guidance import dist_to_waypoint, calculate_gps_heading, current_angle
 from guidance.potential_field import extract_repulsors, ATTRACTOR_THRESHOLD_MM
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from util import Vec2d, avg, to180
@@ -197,7 +197,7 @@ def compute_next_state(state, gps_buffer):
             }
         else:
             return {
-                'state': TRACKING_SECOND_WAYPONT,
+                'state': TRACKING_SECOND_WAYPOINT,
                 'speed': state['speed'],
                 'tracking': 2
             }
@@ -237,7 +237,7 @@ def compute_next_state(state, gps_buffer):
         if reached_waypoint(3, gps_buffer, tolerance=WAYPOINT_TOLERANCE):
             rospy.loginfo('Begin tracking second waypoint')
             return {
-                'state': TRACKING_FOURTH_WAYPOINTA,
+                'state': TRACKING_FOURTH_WAYPOINT,
                 'speed': state['speed'],
                 'tracking': 4
             }
@@ -351,9 +351,6 @@ def update_control((gps, costmap, pose, line_angle, state)):
             rotation = 0
 
         rotation /= 1.0
-
-    elif state['state'] == RAMP_CLIMBING:
-        pass
 
     else:
         # FIXME
