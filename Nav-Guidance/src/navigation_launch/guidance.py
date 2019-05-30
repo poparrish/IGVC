@@ -26,7 +26,8 @@ GUIDANCE_HZ = 10
 # Drivetrain
 #
 
-INITIAL_SPEED = 1  # gotta go FAST
+INITIAL_SPEED = 1.3  # gotta go FAST
+RAMP_SPEED = 2  # gotta go FAST
 
 INITIAL_DISTANCE_CUTOFF = 5000  # slow down once we're within 5m of something
 
@@ -153,31 +154,17 @@ obstacle_debug = rospy.Publisher('guidance/obstacles', PointCloud, queue_size=1)
 
 def compute_next_state(state, gps_buffer):
     """guidance state machine"""
-    # check if we need to slow down
-    speed = state['speed']
-    # if speed == INITIAL_SPEED:
-    #     clusters = partition(nav['lidar'], cluster_mm=500)
-    #     if len(clusters) > 0:
-    #         closest = min([c for c in clusters], key=lambda v: v.mag)
-    #     else:
-    #         closest = 100000000
-    #     if closest < INITIAL_DISTANCE_CUTOFF:
-    #         speed = NORMAL_SPEED
-    #         state['speed'] = speed
-
     rospy.loginfo(state)
     if state['state'] == TRACKING_FIRST_WAYPOINT:
         if reached_waypoint(1, gps_buffer, tolerance=FIRST_WAYPOINT_TOLERANCE):
             rospy.loginfo('Begin tracking second waypoint')
             return {
                 'state': TRACKING_SECOND_WAYPOINT,
-                'speed': state['speed'],
                 'tracking': 2
             }
         else:
             return {
                 'state': TRACKING_FIRST_WAYPOINT,
-                'speed': state['speed'],
                 'tracking': 1
             }
 
@@ -186,20 +173,17 @@ def compute_next_state(state, gps_buffer):
             rospy.loginfo('Begin tracking third waypoint')
             return {
                 'state': TRACKING_THIRD_WAYPOINT,
-                'speed': state['speed'],
                 'tracking': 3
             }
         elif going_up(gps_buffer,tolerance= RAMP_INCLINE_TOLERANCE):
             rospy.loginfo('Begin climbing the ramp')
             return {
                 'state': CLIMBING_UP,
-                'speed': state['speed'],
                 'tracking': 3
             }
         else:
             return {
                 'state': TRACKING_SECOND_WAYPOINT,
-                'speed': state['speed'],
                 'tracking': 2
             }
 
@@ -209,13 +193,11 @@ def compute_next_state(state, gps_buffer):
             rospy.loginfo('Begin climbing down ramp')
             return {
                 'state': CLIMBING_DOWN,
-                'speed': state['speed'],
                 'tracking': 3
             }
         else:
             return {
                 'state': CLIMBING_UP,
-                'speed': state['speed'],
                 'tracking': 3
             }
 
@@ -224,13 +206,11 @@ def compute_next_state(state, gps_buffer):
             rospy.loginfo('Begin following lines')
             return {
                 'state': TRACKING_THIRD_WAYPOINT,
-                'speed': state['speed'],
                 'tracking': 3
             }
         else:
             return {
                 'state': CLIMBING_UP,
-                'speed': state['speed'],
                 'tracking': 3
             }
 
@@ -239,13 +219,11 @@ def compute_next_state(state, gps_buffer):
             rospy.loginfo('Begin tracking second waypoint')
             return {
                 'state': TRACKING_FOURTH_WAYPOINT,
-                'speed': state['speed'],
                 'tracking': 4
             }
         else:
             return {
                 'state': TRACKING_THIRD_WAYPOINT,
-                'speed': state['speed'],
                 'tracking': 1
             }
 
@@ -254,13 +232,11 @@ def compute_next_state(state, gps_buffer):
             rospy.loginfo('Begin tracking second waypoint')
             return {
                 'state': TRACKING_FIRST_WAYPOINT,
-                'speed': state['speed'],
                 'tracking': 1
             }
         else:
             return {
                 'state': TRACKING_FOURTH_WAYPOINT,
-                'speed': state['speed'],
                 'tracking': 4
             }
 
@@ -271,7 +247,7 @@ def compute_next_state(state, gps_buffer):
     #         rospy.loginfo('Begin tracking first waypoint')
     #         return {
     #             'state': WAYPOINT_TRACKING,
-    #             'speed': state['speed'],
+    #             'speed': INITIAL_SPEED,
     #             'tracking': 0
     #         }
     #
@@ -286,14 +262,14 @@ def compute_next_state(state, gps_buffer):
     #             rospy.loginfo('Reached all waypoints, resuming normal operation')
     #             return {
     #                 'state': LINE_FOLLOWING,
-    #                 'speed': state['speed'],
+    #                 'speed': INITIAL_SPEED,
     #             }
     #
     #         next = tracking + 1
     #         rospy.loginfo('Begin tracking waypoint %s', next)
     #         return {
     #             'state': WAYPOINT_TRACKING,
-    #             'speed': state['speed'],
+    #             'speed': INITIAL_SPEED,
     #             'tracking': next
     #         }
 
@@ -366,7 +342,7 @@ def update_control((gps, costmap, pose, line_angle, state)):
                                       points=[Point32(x=v.x / 1000.0, y=v.y / 1000.0) for v in repulsors]))
     translation = to180(potential.angle)
 
-    # rospy.loginfo('translation = %s, rotation = %s, speed = %s', translation, rotation, state['speed'])
+    # rospy.loginfo('translation = %s, rotation = %s, speed = %s', translation, rotation, INITIAL_SPEED)
 
     # don't rotate if bender needs to translate away from a line
     # if state['state'] == LINE_FOLLOWING:
@@ -375,7 +351,11 @@ def update_control((gps, costmap, pose, line_angle, state)):
     #     if np.absolute(translation) > translation_threshhold:
     #         rotation = rotation * rotation_throttle
     rolling_average.append((translation, rotation, state['state']))
-    update_drivetrain(translation, rotation, state['speed'])
+
+    speed = INITIAL_SPEED
+    if state['state'] == CLIMBING_UP:
+        speed = RAMP_SPEED
+    update_drivetrain(translation, rotation, speed)
 
     # rviz debug
     q = quaternion_from_euler(0, 0, math.radians(translation))
