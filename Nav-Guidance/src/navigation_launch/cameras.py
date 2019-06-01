@@ -19,9 +19,10 @@ from guidance import contours_to_vectors
 
 
 
-cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
+#cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
 # cam_name = '/home/nregner/IGVC/Nav-Guidance/src/navigation_launch/dev/arcs.avi'
-
+cam_name = '/home/bender/IGVC/Nav-Guidance/src/navigation_launch/test_videos/overcast_noon_bright128.avi'
+#cam_name = 1
 
 def callback(x):
     #the cv2.createTrackbar() requires callback param
@@ -35,8 +36,23 @@ def process_image(img, camera_info):
     cv2.resizeWindow('img_medianBlur', 640, 480)
     #cv2.imshow('img_medianBlur',img_medianBlur)
 
+    # HSV filter #2 (ramp)
+    # RilowH = cv2.getTrackbarPos('RlowH', 'Rimg_HSV')
+    # RihighH = cv2.getTrackbarPos('RhighH', 'Rimg_HSV')
+    # RilowS = cv2.getTrackbarPos('RlowS', 'Rimg_HSV')
+    # RihighS = cv2.getTrackbarPos('RhighS', 'Rimg_HSV')
+    # RilowV = cv2.getTrackbarPos('RlowV', 'Rimg_HSV')
+    # RihighV = cv2.getTrackbarPos('RhighV', 'Rimg_HSV')
+    # hue_threshold = [RilowH, RihighH]
+    # sat_threshold = [RilowS, RihighS]
+    # val_threshold = [RilowV, RihighV]
+    # img_HSV_ramp = hsv_threshold(input=img_medianBlur, hue=hue_threshold, sat=sat_threshold, val=val_threshold)
+    # img_HSV = rgb_threshold(img_medianBlur,hue_threshold,sat_threshold,val_threshold)
 
-    #HSV filter
+    #cv2.imshow('Rimg_HSV', img_HSV_ramp)
+
+
+    #HSV filter #1
     ilowH = cv2.getTrackbarPos('lowH','img_HSV')
     ihighH = cv2.getTrackbarPos('highH','img_HSV')
     ilowS = cv2.getTrackbarPos('lowS','img_HSV')
@@ -50,8 +66,6 @@ def process_image(img, camera_info):
     #img_HSV = rgb_threshold(img_medianBlur,hue_threshold,sat_threshold,val_threshold)
 
     cv2.imshow('img_HSV',img_HSV)
-
-
 
     #gaussian blur
     gaussianRadius = cv2.getTrackbarPos('gaussianRadius', 'img_gaussianBlur')
@@ -374,7 +388,11 @@ def camera_processor():
 
         #grab a frame
         ret_val, img = cam.read()
-
+	
+        #record a video simultaneously while processing
+        if ret_val==True:
+            out.write(img)
+	
         #for debugging
         # cv2.line(img,(640/2,0),(640/2,480),color=(255,0,0),thickness=2)
         # cv2.line(img,(0,int(480*.25)),(640,int(480*.25)),color=(255,0,0),thickness=2)
@@ -468,6 +486,8 @@ if __name__ == '__main__':
 
     # HSV
     cv2.namedWindow('img_HSV')
+    cv2.namedWindow('Rimg_HSV')
+
     ilowH = 0
     ihighH = 60
     ilowS = 41
@@ -490,12 +510,21 @@ if __name__ == '__main__':
     # ilowV = 160
     # ihighV = 252
 
-    ilowH = 18
-    ihighH = 89
-    ilowS = 0
-    ihighS = 116
+    # bright 128 sunny (best, sorts into blue hue, exposure at shiniest thing it will see)
+    ilowH = 106
+    ihighH = 144
+    ilowS = 58
+    ihighS = 213
     ilowV = 60
-    ihighV = 183
+    ihighV = 245
+
+    RilowH = 114
+    RihighH = 149
+    RilowS = 85
+    RihighS = 255
+    RilowV = 28
+    RihighV = 189
+
 
 
     cv2.createTrackbar('lowH', 'img_HSV', ilowH, 255, callback)
@@ -504,6 +533,13 @@ if __name__ == '__main__':
     cv2.createTrackbar('highS', 'img_HSV', ihighS, 255, callback)
     cv2.createTrackbar('lowV', 'img_HSV', ilowV, 255, callback)
     cv2.createTrackbar('highV', 'img_HSV', ihighV, 255, callback)
+
+    cv2.createTrackbar('RlowH', 'Rimg_HSV', RilowH, 255, callback)
+    cv2.createTrackbar('RhighH', 'Rimg_HSV', RihighH, 255, callback)
+    cv2.createTrackbar('RlowS', 'Rimg_HSV', RilowS, 255, callback)
+    cv2.createTrackbar('RhighS', 'Rimg_HSV', RihighS, 255, callback)
+    cv2.createTrackbar('RlowV', 'Rimg_HSV', RilowV, 255, callback)
+    cv2.createTrackbar('RhighV', 'Rimg_HSV', RihighV, 255, callback)
 
     # Gaussian Blur
     cv2.namedWindow('img_gaussianBlur')
@@ -544,7 +580,13 @@ if __name__ == '__main__':
     croppedWidth = 640
     croppedHeight = 360
 
+    
+
     lidar = []
+
+    #initialize the camera video recorder
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter('test.avi',fourcc,10.0,(640,480))
 
     try:
         camera_processor()

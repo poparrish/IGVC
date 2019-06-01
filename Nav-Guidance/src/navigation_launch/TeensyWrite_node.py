@@ -587,6 +587,9 @@ def start():
             global compass_home
             print "compass_home: ",compass_home
             print 'compass: ',compass['heading']
+            rospy.loginfo(compass_home)
+            rospy.loginfo(compass['heading'])
+
 
             xChange,yChange = 0,0
             xChange, yChange = calculate_delta_odometry(deltaMetersTraveled, currentAngle)

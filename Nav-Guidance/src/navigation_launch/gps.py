@@ -37,7 +37,7 @@ def get_location(mav):
         return {'lat': pos.lat / 10.0 ** 7,
                 'lon': pos.lon / 10.0 ** 7,
                 'satellites': raw.satellites_visible,
-                'heading': int(pos.hdg/100),#just whole #'s
+                'heading': 360-int(pos.hdg/100),#just whole #'s
                 'fixed': raw.fix_type >= GPS_FIX_TYPE_3D_FIX,
                 'pitch': int(np.rad2deg(attitude.pitch)),
                 'roll': int(np.rad2deg(attitude.roll))}
