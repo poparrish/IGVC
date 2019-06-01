@@ -2,12 +2,13 @@
 import math
 import traceback
 
+import numpy as np
 import rospy
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3, TransformStamped, Transform, Point32
 from nav_msgs.msg import Path
 from sensor_msgs.msg import PointCloud
 from std_msgs.msg import String, Header, Int16
-from tf.transformations import quaternion_from_euler
+from tf.transformations import quaternion_from_euler, euler_from_quaternion
 from tf2_msgs.msg import TFMessage
 
 import topics
@@ -17,7 +18,7 @@ from guidance.gps_guidance import dist_to_waypoint, calculate_gps_heading, curre
 from guidance.potential_field import extract_repulsors, ATTRACTOR_THRESHOLD_MM
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from util import Vec2d, avg, to180
-from util.rosutil import extract_tf, rx_subscribe
+from util.rosutil import extract_tf, rx_subscribe, get_rotation
 
 GUIDANCE_NODE = "GUIDANCE"
 GUIDANCE_HZ = 10
@@ -154,7 +155,7 @@ obstacle_debug = rospy.Publisher('guidance/obstacles', PointCloud, queue_size=1)
 
 def compute_next_state(state, gps_buffer):
     """guidance state machine"""
-    rospy.loginfo(state)
+    # rospy.loginfo(state)
     if state['state'] == TRACKING_FIRST_WAYPOINT:
         if reached_waypoint(1, gps_buffer, tolerance=FIRST_WAYPOINT_TOLERANCE):
             rospy.loginfo('Begin tracking second waypoint')
@@ -296,12 +297,13 @@ def update_control((gps, costmap, pose, line_angle, state)):
     transform = pose.transform.translation
     map_transform = map_pose.transform.translation
     diff = transform.x - map_transform.x, transform.y - map_transform.y
+    diff = Vec2d.from_point(diff[0], diff[1])
+    map_rotation = get_rotation(map_pose.transform)
+    rotation = get_rotation(pose.transform)
+    diff = diff.with_angle(diff.angle + map_rotation)
+    diff_rotation = -rotation + map_rotation
 
-    rotation = pose.transform.rotation.z
-    map_rotation = map_pose.transform.rotation.z
-    diff_rotation = math.degrees(rotation - map_rotation)
-
-    path = generate_path(costmap.costmap_bytes, diff_rotation, diff)
+    path = generate_path(costmap.costmap_bytes, diff_rotation, (diff.x, diff.y))
 
     if path is None:
         path = []
@@ -336,7 +338,7 @@ def update_control((gps, costmap, pose, line_angle, state)):
         # state_debug.publish(str(goal))
 
     # calculate translation based on obstacles
-    repulsors = extract_repulsors(diff, costmap.map_bytes)
+    repulsors = extract_repulsors((diff.x, diff.y), costmap.map_bytes)
     potential = compute_potential(repulsors, goal)
     obstacle_debug.publish(PointCloud(header=Header(frame_id=topics.ODOMETRY_FRAME),
                                       points=[Point32(x=v.x / 1000.0, y=v.y / 1000.0) for v in repulsors]))
@@ -360,7 +362,7 @@ def update_control((gps, costmap, pose, line_angle, state)):
     # rviz debug
     q = quaternion_from_euler(0, 0, math.radians(translation))
     heading_debug.publish(PoseStamped(header=Header(frame_id='map'),
-                                      pose=Pose(position=Point(x=diff[0], y=diff[1]),
+                                      pose=Pose(position=Point(x=diff.x, y=diff.y),
                                                 orientation=Quaternion(q[0], q[1], q[2], q[3]))))
 
 

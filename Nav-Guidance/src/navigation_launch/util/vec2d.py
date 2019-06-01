@@ -65,7 +65,7 @@ class Vec2d:
         return self * -1
 
     def __str__(self):
-        return "(%s, %s)" % (self.angle, self.mag)
+        return "angle=%s, mag=%s" % (self.angle, self.mag)
 
     def __repr__(self):
         return self.__str__()

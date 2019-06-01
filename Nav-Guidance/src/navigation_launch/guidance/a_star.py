@@ -84,7 +84,7 @@ def find_path(start, reached_goal, neighbors, weight, heuristic=lambda x: 0):
                 closed_set.add(neighbor)
                 continue
 
-            s = score[current] + heuristic(current) + weight(neighbor)
+            s = score[current] + heuristic(neighbor) + weight(neighbor)
             if neighbor not in open_set:
                 open_set.push((s, neighbor))
             elif s >= score[neighbor]:

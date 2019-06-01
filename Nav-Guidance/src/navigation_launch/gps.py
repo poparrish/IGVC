@@ -33,11 +33,11 @@ def get_location(mav):
 
     attitude=mav.messages.get('ATTITUDE',None)
 
-    if pos is not None and raw is not None:
+    if pos is not None and raw is not None and attitude is not None:
         return {'lat': pos.lat / 10.0 ** 7,
                 'lon': pos.lon / 10.0 ** 7,
                 'satellites': raw.satellites_visible,
-                'heading': 360-int(pos.hdg/100),#just whole #'s
+                'heading': 360 - int(np.rad2deg(attitude.yaw)),  # just whole #'s
                 'fixed': raw.fix_type >= GPS_FIX_TYPE_3D_FIX,
                 'pitch': int(np.rad2deg(attitude.pitch)),
                 'roll': int(np.rad2deg(attitude.roll))}

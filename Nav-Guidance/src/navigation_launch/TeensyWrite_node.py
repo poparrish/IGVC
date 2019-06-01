@@ -617,8 +617,7 @@ def start():
             #     compass_home = compass['heading']
             if compass_calibrated == True:
                 br.sendTransform((fTotalY, fTotalX, 0),
-                                 # tf.transformations.quaternion_from_euler(0, 0, np.deg2rad(compass['heading'])),
-                                 (0, 0, 0, 1),
+                                 tf.transformations.quaternion_from_euler(0, 0, np.deg2rad(compass['heading'])),
                                  rospy.Time.now(),
                                  topics.ODOMETRY_FRAME,
                                  topics.WORLD_FRAME)

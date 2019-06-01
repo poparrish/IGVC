@@ -10,6 +10,7 @@ from std_msgs.msg import Header
 
 import topics
 from map_msg import MapData
+from util.rosutil import get_rotation
 
 UNKNOWN = 127  # unmapped/unknown pixel value used by BreezySLAM
 EMPTY = 255  # no obstacles (white)
@@ -23,7 +24,7 @@ class MapUpdate:
 
 
 class Map:
-    def __init__(self, size_px, size_meters, laser, max_travel=0.5):
+    def __init__(self, size_px, size_meters, laser, max_travel=0.5, max_rotation=10):
         if laser.scan_size != laser.detection_angle_degrees:
             raise ValueError('laser scan_size must equal detection_angle_degrees')
         self.size_px = size_px
@@ -35,6 +36,7 @@ class Map:
         self.transform = zero  # absolute offset relative to world frame
         self.last_update = MapUpdate(scan=[], transform=zero)
         self.max_travel = max_travel
+        self.max_rotation = 10
 
     def create_slam(self):
         return RMHC_SLAM(
@@ -68,7 +70,8 @@ class Map:
 
         traveled = max(abs(self.transform.translation.x - transform.translation.x),
                        abs(self.transform.translation.y - transform.translation.y))
-        if traveled > self.max_travel:
+        rotated = abs(get_rotation(self.transform) - get_rotation(transform))
+        if traveled > self.max_travel or rotated > self.max_rotation:
             self.reset()
             self.transform = map_update.transform
 
