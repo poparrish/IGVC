@@ -444,7 +444,7 @@ def camera_processor():
         # local_map_msg = CameraMsg(contours=contours, camera_info=camera_info)
         # filtered_map_msg=CameraMsg(contours=contour_lines,camera_info=camera_info)#1 polyfit contour
         c = []
-        for cs in vec2d_contour:
+        for cs in filtered_cartesian_contours:
             for v in cs:
                 c.append(v)
         filtered_map_msg=CameraMsg(contours=c,camera_info=camera_info)#all raw contours
