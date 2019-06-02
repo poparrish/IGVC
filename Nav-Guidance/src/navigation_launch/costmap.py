@@ -13,7 +13,7 @@ from costmap_msg import CostmapData
 from mapping import MAP_SIZE_METERS, MAP_SIZE_PIXELS
 from util import rx_subscribe
 
-COSTMAP_DILATION_M = 0.8  # closest distance to obstacles pathfinding is allowed to get
+COSTMAP_DILATION_M = 1.3  # closest distance to obstacles pathfinding is allowed to get
 
 
 def build_costmap(map_data):
@@ -43,7 +43,7 @@ def start():
     def publish_costmap((lidar, camera)):
         costmap = build_costmap(lidar + camera)
         pub.publish(pickle.dumps(costmap))
-        rviz.publish(bridge.cv2_to_imgmsg(costmap.map_bytes, 'mono8'))
+        rviz.publish(bridge.cv2_to_imgmsg(costmap.costmap_bytes, 'mono8'))
 
     lidar_map = rx_subscribe(topics.MAP, String)
     camera_map = rx_subscribe(topics.LANE_MAP, String)

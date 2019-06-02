@@ -316,7 +316,7 @@ def update_control((gps, costmap, pose, line_angle, state)):
 
     # calculate theta_dot based on the current state
     if state['state'] == LINE_FOLLOWING:
-        offset = 5
+        offset = 10
         if len(path) < offset + 1:
             goal = Vec2d(0, ATTRACTOR_THRESHOLD_MM)  # always drive forward
         else:
