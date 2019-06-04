@@ -1,9 +1,10 @@
+import os
 import sys
 import yaml
 
 import cv2
 
-CONFIG_FILE = 'cameraconfig/default.yaml'
+CONFIG_FILE = os.path.dirname(os.path.realpath(__file__)) + '/default.yaml'
 
 
 class Trackbar:

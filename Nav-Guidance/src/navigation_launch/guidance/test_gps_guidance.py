@@ -19,10 +19,10 @@ class TestGPSGuidance(TestCase):
         bearing = initial_bearing(culinary_arts, rec_center)
         heading = calculate_gps_heading({'lat': culinary_arts[0],
                                          'lon': culinary_arts[1],
-                                         'heading': bearing + 10},
+                                         'gps_heading': bearing + 10},
                                         rec_center)
 
-        assert_almost_equal(heading.angle, -10)
+        assert_almost_equal(heading.angle, 350)
         assert_almost_equal(heading.mag, 241.5, places=1)
 
     pass

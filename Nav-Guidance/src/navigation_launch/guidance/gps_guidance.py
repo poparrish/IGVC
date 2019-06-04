@@ -24,7 +24,7 @@ def calculate_gps_heading(loc, waypoint):
     is the distance between two GPS coordinates"""
 
     dist = dist_to_waypoint(loc, waypoint)
-    angle = initial_bearing((loc['lat'], loc['lon']), waypoint) - loc['heading']
+    angle = initial_bearing((loc['lat'], loc['lon']), waypoint) - loc['gps_heading']
 
     return Vec2d(angle, dist)
 

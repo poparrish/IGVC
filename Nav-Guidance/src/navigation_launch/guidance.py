@@ -50,10 +50,10 @@ def update_drivetrain(translation, rotation, speed):
 # Waypoints
 #
 
-GPS_BUFFER = 5  # buffer GPS messages to help with accuracy
+GPS_BUFFER = 20  # buffer GPS messages to help with accuracy
 
-FIRST_WAYPOINT_TOLERANCE = 1  # when to start tracking the first waypoint
-WAYPOINT_TOLERANCE = .5  # precision in meters
+FIRST_WAYPOINT_TOLERANCE = 1.5  # when to start tracking the first waypoint
+WAYPOINT_TOLERANCE = 1  # precision in meters
 RAMP_INCLINE_TOLERANCE=5# how many degrees of incline before we switch states
 
 WAYPOINTS = [
@@ -104,7 +104,7 @@ southwp = [42.6788026, -83.1949093082]
 # ]
 
 def reached_waypoint(num, gps_buffer, tolerance):
-    waypoint = WAYPOINTS[num]
+    waypoint = WAYPOINTS[num-1]
     distance = avg([dist_to_waypoint(loc, waypoint) for loc in gps_buffer])
     # state_debug.publish(str(distance))
 
@@ -226,7 +226,7 @@ def compute_next_state(state, gps_buffer):
         else:
             return {
                 'state': TRACKING_THIRD_WAYPOINT,
-                'tracking': 1
+                'tracking': 3
             }
 
     if state['state'] == TRACKING_FOURTH_WAYPOINT:
