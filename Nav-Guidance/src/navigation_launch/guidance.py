@@ -104,7 +104,7 @@ southwp = [42.6788026, -83.1949093082]
 # ]
 
 def reached_waypoint(num, gps_buffer, tolerance):
-    waypoint = WAYPOINTS[num]
+    waypoint = WAYPOINTS[num-1]
     distance = avg([dist_to_waypoint(loc, waypoint) for loc in gps_buffer])
     # state_debug.publish(str(distance))
 
@@ -226,7 +226,7 @@ def compute_next_state(state, gps_buffer):
         else:
             return {
                 'state': TRACKING_THIRD_WAYPOINT,
-                'tracking': 1
+                'tracking': 3
             }
 
     if state['state'] == TRACKING_FOURTH_WAYPOINT:
