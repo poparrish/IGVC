@@ -57,9 +57,10 @@ WAYPOINT_TOLERANCE = .5  # precision in meters
 RAMP_INCLINE_TOLERANCE=5# how many degrees of incline before we switch states
 
 WAYPOINTS = [
-    # (43.600314, -116.197164),  # N/W corner of field
-    (43.600248, -116.196955),  # center of field
-    (43.600314, -116.197164),  # N/W corner of field
+    (43.60029,-116.19686),
+    (43.60040,-116.19699),
+    (43.60037,-116.19706),
+    (43.60025,-116.19719)
 ]
 
 test1stwp = (42.6785268, -83.1953824)
@@ -138,9 +139,9 @@ CLIMBING_DOWN = 'CLIMBING_DOWN'
 
 
 DEFAULT_STATE = {
-    'state': LINE_FOLLOWING,
+    'state': TRACKING_SECOND_WAYPOINT,
     'speed': INITIAL_SPEED,
-    'tracking': 0
+    'tracking': 2
 }
 # DEFAULT_STATE = {
 #     'state': WAYPOINT_TRACKING,
@@ -313,9 +314,10 @@ def update_control((gps, costmap, pose, line_angle, state)):
                                 pose=Pose(position=Point(x=x_to_m(p[0]),
                                                          y=y_to_m(p[1]))))
                     for p in path]))
-
+    print state
     # calculate theta_dot based on the current state
-    if state['state'] == LINE_FOLLOWING:
+    if state['state'] == LINE_FOLLOWING or \
+            state['state'] == TRACKING_THIRD_WAYPOINT:
         offset = 10
         if len(path) < offset + 1:
             goal = Vec2d(0, ATTRACTOR_THRESHOLD_MM)  # always drive forward
@@ -331,7 +333,7 @@ def update_control((gps, costmap, pose, line_angle, state)):
 
     else:
         # FIXME
-        goal = calculate_gps_heading(gps, WAYPOINTS[state['tracking']])  # track the waypoint
+        goal = calculate_gps_heading(gps, WAYPOINTS[state['tracking'] - 1])  # track the waypoint
 
         rotation = to180(goal.angle)
         goal = goal.with_angle(0)  # don't need to crab for GPS waypoint, steering will handle that
