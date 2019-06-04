@@ -80,7 +80,7 @@ def publish_map(map_pub, topic, process_msg=lambda x: x):
             t, r = tf_listener.lookupTransform(topics.WORLD_FRAME, topics.ODOMETRY_FRAME, rospy.Time(0))
             transform = Transform(translation=Vector3(*t), rotation=Quaternion(*r))
         except Exception as e:
-            rospy.logerr('Failed to lookup transform', e)
+            rospy.logerr('Failed to lookup transform')
             transform = Transform(translation=Vector3(0, 0, 0), rotation=Quaternion(0, 0, 0, 1))
         map_pub.update(MapUpdate(scan=process_msg(unpickle(scan)),
                                  transform=transform))

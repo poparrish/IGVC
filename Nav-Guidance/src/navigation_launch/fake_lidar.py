@@ -12,7 +12,7 @@ if __name__ == '__main__':
     pub = rospy.Publisher(topics.LIDAR, String, queue_size=10)
     rate = rospy.Rate(10)
 
-    msg = pickle.dumps([Vec2d(x, 1000) for x in xrange(0)])
+    msg = pickle.dumps([Vec2d(x, 1000) for x in xrange(-20, 20)])
 
     while not rospy.is_shutdown():
         pub.publish(msg)

@@ -18,7 +18,6 @@
     <node name="lidar_mapping" pkg="navigation_launch" type="mapping_lidar.py" respawn="true" />
     <node name="camera_mapping" pkg="navigation_launch" type="mapping_camera.py" respawn="true" />
     <node name="costmap" pkg="navigation_launch" type="costmap.py" respawn="true" />
-<!--    <node name="path_planner" pkg="navigation_launch" type="path_planner.py" output="screen" />-->
 <!--    <node name="potential_field" pkg="navigation_launch" type="navigation_launch_potential_field" />-->
 
 <!--
