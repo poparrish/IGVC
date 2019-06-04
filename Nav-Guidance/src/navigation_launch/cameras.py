@@ -1,27 +1,24 @@
 #!/usr/bin/env python
+import math
 from enum import Enum
-import pickle
+
 import cv2
 # temp
 import numpy as np
 import rospy
+from rx import Observable
 from std_msgs.msg import String, Int16
 
 import topics
 from camera_info import CameraInfo
 from camera_msg import CameraMsg
-import math
-import pprint
-from util import rx_subscribe, Vec2d
-from rx import Observable
 from guidance import contours_to_vectors
+from cameraconfig.config import create_persistent_trackbar
+from util import rx_subscribe, Vec2d
 
-
-
-
-#cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
+cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
 # cam_name = '/home/nregner/IGVC/Nav-Guidance/src/navigation_launch/dev/arcs.avi'
-cam_name = '/home/bender/IGVC/Nav-Guidance/src/navigation_launch/test_videos/overcast_noon_bright128.avi'
+# cam_name = '/home/nregner/IGVC/Nav-Guidance/src/navigation_launch/test_videos/overcast_noon_bright128.avi'
 #cam_name = 1
 
 def callback(x):
@@ -333,7 +330,7 @@ def vectors_to_points(vector_contours):
 
 def vectors_to_contours(vectors):#same as points just restores contour grouping
     if len(vectors) ==0:
-        return 0
+        return []
     i =0
     #sort contours by contour group
     vectors_sorted=sorted(vectors,key=lambda x: x.contour_group)
@@ -525,14 +522,12 @@ if __name__ == '__main__':
     RilowV = 28
     RihighV = 189
 
-
-
-    cv2.createTrackbar('lowH', 'img_HSV', ilowH, 255, callback)
-    cv2.createTrackbar('highH', 'img_HSV', ihighH, 255, callback)
-    cv2.createTrackbar('lowS', 'img_HSV', ilowS, 255, callback)
-    cv2.createTrackbar('highS', 'img_HSV', ihighS, 255, callback)
-    cv2.createTrackbar('lowV', 'img_HSV', ilowV, 255, callback)
-    cv2.createTrackbar('highV', 'img_HSV', ihighV, 255, callback)
+    create_persistent_trackbar('lowH', 'img_HSV', ilowH, 255)
+    create_persistent_trackbar('highH', 'img_HSV', ihighH, 255)
+    create_persistent_trackbar('lowS', 'img_HSV', ilowS, 255)
+    create_persistent_trackbar('highS', 'img_HSV', ihighS, 255)
+    create_persistent_trackbar('lowV', 'img_HSV', ilowV, 255)
+    create_persistent_trackbar('highV', 'img_HSV', ihighV, 255)
 
     cv2.createTrackbar('RlowH', 'Rimg_HSV', RilowH, 255, callback)
     cv2.createTrackbar('RhighH', 'Rimg_HSV', RihighH, 255, callback)
