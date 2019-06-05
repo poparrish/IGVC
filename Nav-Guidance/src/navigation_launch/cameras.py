@@ -340,7 +340,7 @@ def vectors_to_contours(vectors):#same as points just restores contour grouping
     contours = [[]for j in range(num_contours)]#init a 2d list for contours
     for v in vectors_sorted:
         if v.contour_group == i+1:
-            contours[i].append(v.with_angle(360 - v.angle))
+            contours[i].append(v.with_angle(v.angle))
         else:
             i+=1
 
