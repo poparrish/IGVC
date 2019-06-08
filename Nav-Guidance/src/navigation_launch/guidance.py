@@ -57,10 +57,10 @@ WAYPOINT_TOLERANCE = 1  # precision in meters
 RAMP_INCLINE_TOLERANCE=5# how many degrees of incline before we switch states
 
 WAYPOINTS = [
-    (43.60029,-116.19686),
-    (43.60040,-116.19699),
-    (43.60037,-116.19706),
-    (43.60025,-116.19719)
+    (42.678193376, -83.1956187338),
+    (42.6779877119, -83.1956194079),
+    (42.678193376, -83.1956187338),
+    (42.6779877119,	-83.1956194079),
 ]
 
 test1stwp = (42.6785268, -83.1953824)
@@ -133,15 +133,13 @@ TRACKING_FIRST_WAYPOINT ='TRACKING_FIRST_WAYPOINT'#this can be beginning and end
 TRACKING_SECOND_WAYPOINT = 'TRACKING_SECOND_WAYPOINT'
 TRACKING_THIRD_WAYPOINT = 'TRACKING_THIRD_WAYPOINT'
 TRACKING_FOURTH_WAYPOINT = 'TRACKING_FOURTH_WAYPOINT'
-CLIMBING_UP = 'CLIMBING_UP'
-CLIMBING_DOWN = 'CLIMBING_DOWN'
 
 
 
 DEFAULT_STATE = {
-    'state': LINE_FOLLOWING,
+    'state': TRACKING_FIRST_WAYPOINT,
     'speed': INITIAL_SPEED,
-    'tracking': 0
+    'tracking': 1
 }
 # DEFAULT_STATE = {
 #     'state': WAYPOINT_TRACKING,
@@ -177,12 +175,6 @@ def compute_next_state(state, gps_buffer):
                 'state': TRACKING_THIRD_WAYPOINT,
                 'tracking': 3
             }
-        elif going_up(gps_buffer,tolerance= RAMP_INCLINE_TOLERANCE):
-            rospy.loginfo('Begin climbing the ramp')
-            return {
-                'state': CLIMBING_UP,
-                'tracking': 3
-            }
         else:
             return {
                 'state': TRACKING_SECOND_WAYPOINT,
@@ -190,32 +182,6 @@ def compute_next_state(state, gps_buffer):
             }
 
     #NOTE AFTER WE FINISH CLIMBING DOWN, WE LOOP BACK TO TRACKING_THIRD_WAYPOINT
-    if state['state'] == CLIMBING_UP:
-        if going_down(gps_buffer,tolerance=RAMP_INCLINE_TOLERANCE):
-            rospy.loginfo('Begin climbing down ramp')
-            return {
-                'state': CLIMBING_DOWN,
-                'tracking': 3
-            }
-        else:
-            return {
-                'state': CLIMBING_UP,
-                'tracking': 3
-            }
-
-    if state['state'] == CLIMBING_DOWN:
-        if going_flat(gps_buffer,tolerance=RAMP_INCLINE_TOLERANCE):
-            rospy.loginfo('Begin following lines')
-            return {
-                'state': TRACKING_THIRD_WAYPOINT,
-                'tracking': 3
-            }
-        else:
-            return {
-                'state': CLIMBING_UP,
-                'tracking': 3
-            }
-
     if state['state'] == TRACKING_THIRD_WAYPOINT:
         if reached_waypoint(3, gps_buffer, tolerance=WAYPOINT_TOLERANCE):
             rospy.loginfo('Begin tracking second waypoint')
@@ -316,8 +282,7 @@ def update_control((gps, costmap, pose, line_angle, state)):
                     for p in path]))
     print state
     # calculate theta_dot based on the current state
-    if state['state'] == LINE_FOLLOWING or \
-            state['state'] == TRACKING_THIRD_WAYPOINT:
+    if state['state'] == LINE_FOLLOWING:
         offset = 10
         if len(path) < offset + 1:
             goal = Vec2d(0, ATTRACTOR_THRESHOLD_MM)  # always drive forward
@@ -357,8 +322,8 @@ def update_control((gps, costmap, pose, line_angle, state)):
     rolling_average.append((translation, rotation, state['state']))
 
     speed = INITIAL_SPEED
-    if state['state'] == CLIMBING_UP:
-        speed = RAMP_SPEED
+    # if state['state'] == CLIMBING_UP:
+    #     speed = RAMP_SPEED
     update_drivetrain(translation, rotation, speed)
 
     # rviz debug
