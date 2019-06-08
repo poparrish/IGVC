@@ -27,7 +27,7 @@ GUIDANCE_HZ = 10
 # Drivetrain
 #
 
-INITIAL_SPEED = 1.3  # gotta go FAST
+INITIAL_SPEED = 1.7  # gotta go FAST
 RAMP_SPEED = 2  # gotta go FAST
 
 INITIAL_DISTANCE_CUTOFF = 5000  # slow down once we're within 5m of something
@@ -43,7 +43,7 @@ def update_drivetrain(translation, rotation, speed):
     translation = max(-MAX_TRANSLATION, min(translation, MAX_TRANSLATION))
     rotation = max(-MAX_ROTATION, min(rotation, MAX_ROTATION))
     # speed, velocity_vector, theta_dot
-    control.publish(Vector3(x=speed, y=translation, z=-rotation))
+    control.publish(Vector3(x=speed, y=0, z=-rotation))
 
 
 #
@@ -322,9 +322,10 @@ def update_control((gps, costmap, pose, line_angle, state)):
     rolling_average.append((translation, rotation, state['state']))
 
     speed = INITIAL_SPEED
-    # if state['state'] == CLIMBING_UP:
-    #     speed = RAMP_SPEED
-    update_drivetrain(translation, rotation, speed)
+    if state['state'] == TRACKING_SECOND_WAYPOINT:
+        update_drivetrain(0, 0, 0)
+    else:
+        update_drivetrain(translation, rotation, speed)
 
     # rviz debug
     q = quaternion_from_euler(0, 0, math.radians(translation))

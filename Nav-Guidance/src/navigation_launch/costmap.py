@@ -46,8 +46,8 @@ def start():
         rviz.publish(bridge.cv2_to_imgmsg(costmap.costmap_bytes, 'mono8'))
 
     lidar_map = rx_subscribe(topics.MAP, String)
-    camera_map = rx_subscribe(topics.LANE_MAP, String)
-    lidar_map.combine_latest(camera_map, lambda l, c: (l, c)) \
+    # camera_map = rx_subscribe(topics.LANE_MAP, String)
+    lidar_map.combine_latest(lidar_map, lambda l, c: (l, c)) \
         .throttle_first(150) \
         .subscribe(publish_costmap)
 
