@@ -256,7 +256,7 @@ def flatten_contours(pointCloud):
         for point in contour:
             point.contour_group=contour_count#assign a contour group
             cloud.append(point)
-    return cloud
+    return cloud,contour_count
 
 
 def filter_barrel_lines(camera,angle_range,lidar_vecs,mag_cusion):
@@ -272,51 +272,94 @@ def filter_barrel_lines(camera,angle_range,lidar_vecs,mag_cusion):
     :return: camera_vecs input data type with barrel noise removed
     """
 
-    camera_vecs = flatten_contours(camera)
-    # print "camera_vecs: ", camera_vecs
-    if len(camera_vecs) == 0:
-        return camera_vecs
+    def to360(angle):
+        if angle < 0:
+            angle = (angle % -360) + 360
+        return angle % 360
 
+
+    check_full = flatten_contours(camera)
+
+    if len(check_full) == 0:
+        return check_full
     else:
-        camera_vecs.sort(key=lambda x: x.angle)
-        start_iter_angle =int(camera_vecs[0].angle)
-        try:
-            camera_groups = []
-            vec_group = []
-            camera_vecs_iterator=iter(camera_vecs)
-            angle_start = start_iter_angle
-            total_dist=0
-            while True:
-                next_vec=next(camera_vecs_iterator)
-                if next_vec.angle < angle_start + angle_range:#between i and i+range so add to group
-                    vec_group.append(next_vec)
-                    total_dist+=next_vec.mag
-                else:
-                    avg_dist = total_dist/len(vec_group)
-                    camera_groups.append([angle_start,angle_range,avg_dist,vec_group])
-                    angle_start+=angle_range
-                    vec_group=[]
-                    vec_group.append(next_vec)
-                    total_dist=next_vec.mag
-        except StopIteration:
-            pass
+        return_vecs = []
+        # rotate lidar
+        for vec in lidar_vecs:
+            vec.angle += 90
+        # normalize rotation
+        for normalized_vec in lidar_vecs:
+            new_angle = to360(normalized_vec.angle)
+            normalized_vec.angle = new_angle
+        # #now 0 degrees is on the right bottom and 180 is on the left bottom.
+        for camera_vecs in camera:
+            #rotatecamera
+            for vec in camera_vecs:
+                vec.angle+=90
+            #normalize rotation
+            for normalized_vec in camera_vecs:
+                new_angle=to360(normalized_vec.angle)
+                normalized_vec.angle = new_angle
 
-        filtered_camera_groups = camera_groups
-        for next_lidar_vec in lidar_vecs:
-            for camera_group in camera_groups:
-                if int(next_lidar_vec.angle) in range(camera_group[0], camera_group[0] + camera_group[1]):  # check if lidar scan indicates camera data should be thrown
-                    #if next_lidar_vec.mag < 2500:#for testing in lab
-                    if next_lidar_vec.mag < camera_group[2] + mag_cusion:
-                        if camera_group in filtered_camera_groups:
-                            filtered_camera_groups.remove(camera_group)
-                    break
 
-        filtered_camera_vecs=[]
-        for group in filtered_camera_groups:
-            for vec in group[3]:
-                filtered_camera_vecs.append(vec)
+            #now 0 is in front increasing counterclockwise
+            camera_vecs.sort(key=lambda x: x.angle)
+            start_iter_angle =int(camera_vecs[0].angle)
+            try:
+                camera_groups = []
+                vec_group = []
+                camera_vecs_iterator=iter(camera_vecs)
+                angle_start = start_iter_angle+5
+                total_dist=0
+                while True:
+                    next_vec=next(camera_vecs_iterator)
+                    if next_vec.angle < angle_start + angle_range:#between i and i+range so add to group
+                        vec_group.append(next_vec)
+                        total_dist+=next_vec.mag
+                    else:
+                        avg_dist = total_dist/len(vec_group)
+                        camera_groups.append([angle_start,angle_range,avg_dist,vec_group])
+                        angle_start+=angle_range
+                        vec_group=[]
+                        vec_group.append(next_vec)
+                        total_dist=next_vec.mag
+            except StopIteration:
+                pass
 
-        return filtered_camera_vecs
+            filtered_camera_groups = camera_groups
+            for next_lidar_vec in lidar_vecs:
+                for camera_group in camera_groups:
+                    if int(next_lidar_vec.angle) in range(camera_group[0], camera_group[0] + camera_group[1]):  # check if lidar scan indicates camera data should be thrown
+                        #if next_lidar_vec.mag < 2500:#for testing in lab
+                        if next_lidar_vec.mag < camera_group[2] + mag_cusion:
+                            if camera_group in filtered_camera_groups:
+                                filtered_camera_groups.remove(camera_group)
+                        break
+
+
+
+            for group in filtered_camera_groups:
+                for vec in group[3]:
+                    return_vecs.append(vec)
+
+        # undo rotation
+        for vec in return_vecs:
+            vec.angle -= 90
+        # normalize rotation
+        for normalized_vec in return_vecs:
+            new_angle = to360(normalized_vec.angle)
+            normalized_vec.angle = new_angle
+
+        for vec in lidar_vecs:
+            vec.angle -= 90
+        # normalize rotation
+        for normalized_vec in lidar_vecs:
+            new_angle = to360(normalized_vec.angle)
+            normalized_vec.angle = new_angle
+        #filtered camera vecs output should just be [vec,vec,vec]
+
+
+        return return_vecs
 
 def update_lidar(laser_pickle):
     global lidar
@@ -409,7 +452,7 @@ def camera_processor():
         contours = convert_to_cartesian(camera_info.map_width, camera_info.map_height, contours)
         #for filtered barrels
         vec2d_contour = contours_to_vectors(contours)#replaces NAV
-        filtered_contours = filter_barrel_lines(camera=vec2d_contour, angle_range=4,lidar_vecs=lidar,mag_cusion=300)
+        filtered_contours = filter_barrel_lines(camera=vec2d_contour, angle_range=8,lidar_vecs=lidar,mag_cusion=300)
 
         #EXTEND THE LINES
         filtered_cartesian_contours = vectors_to_contours(filtered_contours)
