@@ -50,11 +50,11 @@ def update_drivetrain(translation, rotation, speed):
 # Waypoints
 #
 
-GPS_BUFFER = 20  # buffer GPS messages to help with accuracy
+GPS_BUFFER = 10  # buffer GPS messages to help with accuracy
 
 FIRST_WAYPOINT_TOLERANCE = 1.5  # when to start tracking the first waypoint
 WAYPOINT_TOLERANCE = 1  # precision in meters
-RAMP_INCLINE_TOLERANCE=5# how many degrees of incline before we switch states
+RAMP_INCLINE_TOLERANCE = 5  # how many degrees of incline before we switch states
 
 LAT_OFFSET = 0.0
 LON_OFFSET = 0.0
