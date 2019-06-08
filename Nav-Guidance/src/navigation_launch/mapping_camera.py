@@ -11,7 +11,7 @@ def start_mapping():
     camera_map = create_map(detection_angle_degrees=180, detection_margin=5)
     publish_map(MapPublisher(camera_map, topics.LANE_MAP),
                 topic=topics.CAMERA,
-                process_msg=lambda msg: MAXED + msg.contours)
+                process_msg=lambda msg: MAXED)
 
     rospy.spin()
 
