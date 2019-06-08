@@ -14,7 +14,7 @@ from sensor_msgs.msg import PointCloud
 from std_msgs.msg import Header
 
 import topics
-from a_star import find_path, grid_neighbors, euclidean
+from a_star import find_path, grid_neighbors, euclidean, manhattan
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from util import Vec2d, to360, to180
 
@@ -99,6 +99,6 @@ def generate_path(costmap, heading, (x, y)):
                      reached_goal=is_goal,
                      neighbors=grid_neighbors(costmap, jump_size=SPACING),
                      weight=weight,
-                     heuristic=lambda v: euclidean(v, ideal))
+                     heuristic=lambda v: manhattan(v, ideal))
 
     return path

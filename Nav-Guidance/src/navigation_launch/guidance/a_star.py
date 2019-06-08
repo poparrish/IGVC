@@ -100,14 +100,20 @@ def find_path(start, reached_goal, neighbors, weight, heuristic=lambda x: 0):
 
 
 def grid_neighbors(grid, jump_size=1):
+    diag = jump_size
+
     def neighbors((x, y)):
-        if x >= jump_size:
-            yield (x - jump_size, y)
-        if y >= jump_size:
-            yield (x, y - jump_size)
-        if len(grid) > 0 and x < len(grid[0]) - jump_size:
-            yield (x + jump_size, y)
-        if y < len(grid) - jump_size:
-            yield (x, y + jump_size)
+        x_min = x >= jump_size
+        y_min = y >= jump_size
+        x_max = len(grid) > 0 and x < len(grid[0]) - jump_size
+        y_max = y < len(grid) - jump_size
+        if x_min: yield (x - jump_size, y)
+        if y_min: yield (x, y - jump_size)
+        if x_max: yield (x + jump_size, y)
+        if y_max: yield (x, y + jump_size)
+        if x_min and y_min: yield (x - diag, y - diag)
+        if x_max and y_max: yield (x + diag, y + diag)
+        if x_min and y_max: yield (x - diag, y + diag)
+        if x_max and y_min: yield (x + diag, y - diag)
 
     return neighbors
