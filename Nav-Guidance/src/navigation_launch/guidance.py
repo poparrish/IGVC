@@ -56,6 +56,9 @@ FIRST_WAYPOINT_TOLERANCE = 1.5  # when to start tracking the first waypoint
 WAYPOINT_TOLERANCE = 1  # precision in meters
 RAMP_INCLINE_TOLERANCE=5# how many degrees of incline before we switch states
 
+LAT_OFFSET = 0.0
+LON_OFFSET = 0.0
+
 WAYPOINTS = [
     (43.60029,-116.19686),
     (43.60040,-116.19699),
@@ -63,49 +66,11 @@ WAYPOINTS = [
     (43.60025,-116.19719)
 ]
 
-test1stwp = (42.6785268, -83.1953824)
-test2ndwp = (42.6786267, -83.1948953)
-# WAYPOINTS = [
-#     test2ndwp,
-#     test1stwp,
-#     test2ndwp
-# ]
-
-
-endof = (42.678363, -83.1945975)
-qual1 = (42.6782191223, -83.1955080989)
-qual2 = (42.6778987274, -83.1954820799)
-
-rolling_average = []
-
-# WAYPOINTS = [
-#     endof,
-#     qual1,
-#     qual2,
-#     qual1
-# ]
-
-northwp = [42.6790984, -83.1949250546]
-midwp = [42.6789603912, -83.1951132036]
-southwp = [42.6788026, -83.1949093082]
-
-
-# WAYPOINTS = [
-#     northwp,
-#     midwp,
-#     southwp
-# ]
-
-
-# WAYPOINTS = [
-#     southwp,
-#     midwp,
-#     northwp
-# ]
 
 def reached_waypoint(num, gps_buffer, tolerance):
-    waypoint = WAYPOINTS[num-1]
-    distance = avg([dist_to_waypoint(loc, waypoint) for loc in gps_buffer])
+    (lat, lon) = WAYPOINTS[num - 1]
+    distance = avg([dist_to_waypoint(msg, (lat + LAT_OFFSET, lon + LON_OFFSET))
+                    for msg in gps_buffer])
     # state_debug.publish(str(distance))
 
     return distance < tolerance
@@ -354,7 +319,6 @@ def update_control((gps, costmap, pose, line_angle, state)):
     #     rotation_throttle = 0
     #     if np.absolute(translation) > translation_threshhold:
     #         rotation = rotation * rotation_throttle
-    rolling_average.append((translation, rotation, state['state']))
 
     speed = INITIAL_SPEED
     if state['state'] == CLIMBING_UP:
