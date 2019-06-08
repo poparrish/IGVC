@@ -139,9 +139,9 @@ CLIMBING_DOWN = 'CLIMBING_DOWN'
 
 
 DEFAULT_STATE = {
-    'state': TRACKING_SECOND_WAYPOINT,
+    'state': LINE_FOLLOWING,
     'speed': INITIAL_SPEED,
-    'tracking': 2
+    'tracking': 0
 }
 # DEFAULT_STATE = {
 #     'state': WAYPOINT_TRACKING,
@@ -325,7 +325,7 @@ def update_control((gps, costmap, pose, line_angle, state)):
             point = path[offset]
             goal = Vec2d.from_point(x_to_m(point[0] + 0.5), y_to_m(point[1] + 0.5))
             goal = goal.with_magnitude(ATTRACTOR_THRESHOLD_MM)
-        rotation = line_angle.data  # rotate to follow lines
+        rotation = -line_angle.data  # rotate to follow lines
         if abs(rotation) < 10:
             rotation = 0
 
