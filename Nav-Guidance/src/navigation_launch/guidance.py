@@ -323,6 +323,15 @@ def update_control((gps, costmap, pose, line_angle, state)):
     speed = INITIAL_SPEED
     if state['state'] == CLIMBING_UP:
         speed = RAMP_SPEED
+        rotation = gps['roll']
+        rotation *= -10
+        translation = 0
+
+    if state['state'] == CLIMBING_DOWN:
+        rotation = gps['roll']
+        rotation *= 10
+        translation = 0
+
     update_drivetrain(translation, rotation, speed)
 
     # rviz debug
