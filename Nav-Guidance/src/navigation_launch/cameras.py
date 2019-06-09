@@ -414,8 +414,8 @@ def calculate_line_angle(contour):
 
 
 def update_exposure(value):
-    res = os.system('v4l2-ctl --set-ctrl=exposure_auto=1 &&' +
-                    'v4l2-ctl --set-ctrl=exposure_absolute=' + str(value))
+    res = os.system('v4l2-ctl --device=' + cam_name + ' --set-ctrl=exposure_auto=1 &&' +
+                    'v4l2-ctl --device=' + cam_name + ' --set-ctrl=exposure_absolute=' + str(value))
     rospy.loginfo('Updated exposure ' + str(value) + ' ' + str(res))
 
 
