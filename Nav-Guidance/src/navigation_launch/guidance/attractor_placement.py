@@ -34,7 +34,7 @@ def edge_point():
 def navigable_edge_point((x, y), heading):
     angle = math.degrees(math.atan2(y - MAP_SIZE_PIXELS / 2.0,
                                     x - MAP_SIZE_PIXELS / 2.0))
-    return abs(to180(angle) - to180(heading)) <= 90
+    return abs(to180(angle)) <= 90
 
 
 def x_to_pixel(m):
@@ -71,9 +71,7 @@ def generate_path(costmap, heading, (x, y)):
 
     x = int(round(x_to_pixel(x) / float(SPACING))) * SPACING
     y = int(round(y_to_pixel(y) / float(SPACING))) * SPACING
-    ideal = find_ideal(heading, x, y)
-    ideal = (int(ideal.x + MAP_SIZE_PIXELS / 2.0),
-             int(ideal.y + MAP_SIZE_PIXELS / 2.0))
+    ideal = Vec2d.from_point(100, y)
     # xrange_ = [Point32(x=find_ideal(v, x, y).x / 50*2.5, y=find_ideal(v, x, y).y / 50*2.5) for v in xrange(360)]
     # xrange_ = [Point32(x=find_ideal(v, x, y).x / 50*2.5, y=find_ideal(v, x, y).y / 50*2.5) for v in [heading]]
     xrange_ = [Point32(x=(v[0] - 50) / 50.0 * 2.5, y=(v[1] - 50) / 50.0 * 2.5) for v in valid_edges]
