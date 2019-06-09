@@ -16,7 +16,8 @@ from util import rx_subscribe
 COSTMAP_DILATION_M = 1.3  # closest distance to obstacles pathfinding is allowed to get
 
 
-def build_costmap(map_data):
+def build_costmap(lidar, camera):
+    map_data = lidar + camera
     # dilate obstacles
     dilation = int(float(COSTMAP_DILATION_M) / MAP_SIZE_METERS * MAP_SIZE_PIXELS)
     kernel = np.ones((dilation, dilation), np.uint8)
@@ -29,7 +30,8 @@ def build_costmap(map_data):
 
     return CostmapData(transform=map_data.transform,
                        costmap_bytes=img,
-                       map_bytes=map_data.map_bytes)
+                       map_bytes=map_data.map_bytes,
+                       lidar_bytes=lidar.map_bytes)
 
 
 def start():
@@ -41,7 +43,7 @@ def start():
     rviz = rospy.Publisher(topics.COSTMAP + "_rviz", Image, queue_size=1)
 
     def publish_costmap((lidar, camera)):
-        costmap = build_costmap(lidar + camera)
+        costmap = build_costmap(lidar, camera)
         pub.publish(pickle.dumps(costmap))
         rviz.publish(bridge.cv2_to_imgmsg(costmap.costmap_bytes, 'mono8'))
 

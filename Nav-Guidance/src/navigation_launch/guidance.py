@@ -27,12 +27,11 @@ GUIDANCE_HZ = 10
 # Drivetrain
 #
 
-INITIAL_SPEED = 1.6  # gotta go FAST
-RAMP_SPEED = 2  # gotta go FAST
+FAST_SPEED = 1.8  # m/s
+DIST_CUTOFF = 1500  # slow down once we're within 2m of something
+SLOW_SPEED = 1.5
+RAMP_SPEED = 2
 
-INITIAL_DISTANCE_CUTOFF = 5000  # slow down once we're within 5m of something
-
-NORMAL_SPEED = .5  # forward speed in m/s
 MAX_ROTATION = 90  # max crabbing angle
 MAX_TRANSLATION = 90  # max crabbing angle
 
@@ -105,7 +104,7 @@ CLIMBING_DOWN = 'CLIMBING_DOWN'
 
 DEFAULT_STATE = {
     'state': LINE_FOLLOWING,
-    'speed': INITIAL_SPEED,
+    'speed': SLOW_SPEED,
     'tracking': 0
 }
 # DEFAULT_STATE = {
@@ -320,17 +319,24 @@ def update_control((gps, costmap, pose, line_angle, state)):
     #     if np.absolute(translation) > translation_threshhold:
     #         rotation = rotation * rotation_throttle
 
-    speed = INITIAL_SPEED
     if state['state'] == CLIMBING_UP:
         speed = RAMP_SPEED
         rotation = gps['roll']
         rotation *= -10
         translation = 0
-
-    if state['state'] == CLIMBING_DOWN:
+    elif state['state'] == CLIMBING_DOWN:
+        speed = SLOW_SPEED
         rotation = gps['roll']
         rotation *= 10
         translation = 0
+    else:
+        obstacles = extract_repulsors((diff.x, diff.y), costmap.lidar_bytes)
+        obstacles = [o for o in obstacles if abs(to180(o.angle)) < 45]
+        min_dist = min(obstacles, key=lambda x: x.mag) if len(obstacles) > 0 else DIST_CUTOFF
+        if min_dist < DIST_CUTOFF:
+            speed = SLOW_SPEED
+        else:
+            speed = FAST_SPEED
 
     update_drivetrain(translation, rotation, speed)
 
