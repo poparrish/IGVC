@@ -6,6 +6,7 @@ import cv2
 
 CONFIG_FILE = os.path.dirname(os.path.realpath(__file__)) + '/default.yaml'
 
+# TODO: Get rid of globals...
 
 class Trackbar:
     trackbars = []

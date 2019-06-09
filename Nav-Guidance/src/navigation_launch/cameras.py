@@ -68,6 +68,11 @@ def process_image(img, camera_info):
 
     cv2.imshow('img_HSV',img_HSV)
 
+    # apply opening filter to remove ramp lip
+    kernel_size = cv2.getTrackbarPos('contoursOpeningKernelSize', 'img_displayFilteredContours')
+    kernel = np.ones((kernel_size, kernel_size), np.uint8)
+    img_HSV = cv2.morphologyEx(img_HSV, cv2.MORPH_OPEN, kernel)
+
     #gaussian blur
     gaussianRadius = cv2.getTrackbarPos('gaussianRadius', 'img_gaussianBlur')
     img_gaussianBlur = blur(src=img_HSV,type=BlurType.Gaussian_Blur,radius=gaussianRadius)
@@ -639,6 +644,7 @@ if __name__ == '__main__':
     cv2.createTrackbar('contoursMinVertices','img_displayFilteredContours',contoursMinVertices,2000, callback)
     cv2.createTrackbar('contoursMinRatio','img_displayFilteredContours',contoursMinRatio,100, callback)
     cv2.createTrackbar('contoursMaxRatio','img_displayFilteredContours',contoursMaxRatio,100, callback)
+    create_persistent_trackbar('contoursOpeningKernelSize', 'img_displayFilteredContours', 0)
 
     # create trackBars for on real time tuning
 
