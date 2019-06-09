@@ -105,7 +105,7 @@ CLIMBING_DOWN = 'CLIMBING_DOWN'
 DEFAULT_STATE = {
     'state': LINE_FOLLOWING,
     'speed': SLOW_SPEED,
-    'tracking': 0
+    'tracking': 1
 }
 # DEFAULT_STATE = {
 #     'state': WAYPOINT_TRACKING,
@@ -129,10 +129,7 @@ def compute_next_state(state, gps_buffer):
                 'tracking': 2
             }
         else:
-            return {
-                'state': TRACKING_FIRST_WAYPOINT,
-                'tracking': 1
-            }
+            return state
 
     if state['state'] == TRACKING_SECOND_WAYPOINT:
         if reached_waypoint(2, gps_buffer, tolerance=WAYPOINT_TOLERANCE):
@@ -141,17 +138,8 @@ def compute_next_state(state, gps_buffer):
                 'state': TRACKING_THIRD_WAYPOINT,
                 'tracking': 3
             }
-        elif going_up(gps_buffer,tolerance= RAMP_INCLINE_TOLERANCE):
-            rospy.loginfo('Begin climbing the ramp')
-            return {
-                'state': CLIMBING_UP,
-                'tracking': 3
-            }
         else:
-            return {
-                'state': TRACKING_SECOND_WAYPOINT,
-                'tracking': 2
-            }
+            return state
 
     #NOTE AFTER WE FINISH CLIMBING DOWN, WE LOOP BACK TO TRACKING_THIRD_WAYPOINT
     if state['state'] == CLIMBING_UP:
@@ -162,10 +150,7 @@ def compute_next_state(state, gps_buffer):
                 'tracking': 3
             }
         else:
-            return {
-                'state': CLIMBING_UP,
-                'tracking': 3
-            }
+            return state
 
     if state['state'] == CLIMBING_DOWN:
         if going_flat(gps_buffer,tolerance=RAMP_INCLINE_TOLERANCE):
@@ -175,10 +160,7 @@ def compute_next_state(state, gps_buffer):
                 'tracking': 3
             }
         else:
-            return {
-                'state': CLIMBING_UP,
-                'tracking': 3
-            }
+            return state
 
     if state['state'] == TRACKING_THIRD_WAYPOINT:
         if reached_waypoint(3, gps_buffer, tolerance=WAYPOINT_TOLERANCE):
@@ -187,24 +169,24 @@ def compute_next_state(state, gps_buffer):
                 'state': TRACKING_FOURTH_WAYPOINT,
                 'tracking': 4
             }
-        else:
+        elif going_up(gps_buffer, tolerance=RAMP_INCLINE_TOLERANCE):
+            rospy.loginfo('Begin climbing the ramp')
             return {
-                'state': TRACKING_THIRD_WAYPOINT,
+                'state': CLIMBING_UP,
                 'tracking': 3
             }
+        else:
+            return state
 
     if state['state'] == TRACKING_FOURTH_WAYPOINT:
         if reached_waypoint(4, gps_buffer, tolerance=WAYPOINT_TOLERANCE):
             rospy.loginfo('Begin tracking second waypoint')
             return {
-                'state': TRACKING_FIRST_WAYPOINT,
+                'state': LINE_FOLLOWING,
                 'tracking': 1
             }
         else:
-            return {
-                'state': TRACKING_FOURTH_WAYPOINT,
-                'tracking': 4
-            }
+            return state
 
     # if state['state'] == LINE_FOLLOWING:
     #
