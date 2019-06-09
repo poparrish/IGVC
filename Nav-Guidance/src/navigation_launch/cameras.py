@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import math
 from enum import Enum
+from datetime import datetime
 
 import cv2
 # temp
@@ -15,6 +16,8 @@ from camera_msg import CameraMsg
 from guidance import contours_to_vectors
 from cameraconfig.config import create_persistent_trackbar
 from util import rx_subscribe, Vec2d
+
+
 
 cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
 # cam_name = '/home/nregner/IGVC/Nav-Guidance/src/navigation_launch/dev/arcs.avi'
@@ -259,7 +262,7 @@ def flatten_contours(pointCloud):
     return cloud,contour_count
 
 
-def filter_barrel_lines(camera,angle_range,lidar_vecs,mag_cusion):
+def filter_barrel_lines(camera,angle_range,lidar_vecs,mag_cusion,barrel_cusion):
     """
     This removes lines the camera sees that are likely attached to a barrel. It groups all camera data into chunks
     determined by size angle_range. If a laser scan is in the angle_range of the camera chunk and the laser scan is
@@ -305,11 +308,12 @@ def filter_barrel_lines(camera,angle_range,lidar_vecs,mag_cusion):
             #now 0 is in front increasing counterclockwise
             camera_vecs.sort(key=lambda x: x.angle)
             start_iter_angle =int(camera_vecs[0].angle)
+            end_iter_angle=int(camera_vecs[1].angle)
             try:
                 camera_groups = []
                 vec_group = []
                 camera_vecs_iterator=iter(camera_vecs)
-                angle_start = start_iter_angle+5
+                angle_start = start_iter_angle
                 total_dist=0
                 while True:
                     next_vec=next(camera_vecs_iterator)
@@ -335,10 +339,18 @@ def filter_barrel_lines(camera,angle_range,lidar_vecs,mag_cusion):
                             if camera_group in filtered_camera_groups:
                                 filtered_camera_groups.remove(camera_group)
                         break
-
-
-
-            for group in filtered_camera_groups:
+                    #now check for the pads as determined from the original grouping sort (start_end_iter)
+                    if int(next_lidar_vec.angle) in range(int(start_iter_angle), int(start_iter_angle)-barrel_cusion):#right
+                        if next_lidar_vec.mag < camera_group[2] + mag_cusion:
+                            if camera_group in filtered_camera_groups:
+                                filtered_camera_groups.remove(camera_group)
+                        break
+                    if int(next_lidar_vec.angle) in range(int(end_iter_angle),int(end_iter_angle) + barrel_cusion):#left
+                        if next_lidar_vec.mag < camera_group[2] + mag_cusion:
+                            if camera_group in filtered_camera_groups:
+                                filtered_camera_groups.remove(camera_group)
+                        break
+            for group in filtered_camera_groups:#remove contour grouping
                 for vec in group[3]:
                     return_vecs.append(vec)
 
@@ -452,7 +464,7 @@ def camera_processor():
         contours = convert_to_cartesian(camera_info.map_width, camera_info.map_height, contours)
         #for filtered barrels
         vec2d_contour = contours_to_vectors(contours)#replaces NAV
-        filtered_contours = filter_barrel_lines(camera=vec2d_contour, angle_range=8,lidar_vecs=lidar,mag_cusion=300)
+        filtered_contours = filter_barrel_lines(camera=vec2d_contour, angle_range=8,lidar_vecs=lidar,mag_cusion=300,barrel_cusion=5)
 
         #EXTEND THE LINES
         filtered_cartesian_contours = vectors_to_contours(filtered_contours)
@@ -551,12 +563,12 @@ if __name__ == '__main__':
     # ihighV = 252
 
     # bright 128 sunny (best, sorts into blue hue, exposure at shiniest thing it will see)
-    ilowH = 106
-    ihighH = 144
-    ilowS = 58
-    ihighS = 213
-    ilowV = 60
-    ihighV = 245
+    ilowH = 22
+    ihighH = 156
+    ilowS = 5
+    ihighS = 105
+    ilowV = 92
+    ihighV = 173
 
     RilowH = 114
     RihighH = 149
@@ -586,7 +598,7 @@ if __name__ == '__main__':
 
     # filter contours
     cv2.namedWindow('img_displayFilteredContours')
-    contoursMinArea = 1000
+    contoursMinArea = 3200
     contoursMinPerimeter = 1
     contoursMinWidth = 0
     contoursMaxWidth = 1000000
@@ -624,7 +636,10 @@ if __name__ == '__main__':
 
     #initialize the camera video recorder
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter('test.avi',fourcc,10.0,(640,480))
+    extension = '.avi'
+    name=str(datetime.now())
+    file_name=name+extension
+    out = cv2.VideoWriter(file_name,fourcc,10.0,(640,480))
 
     try:
         camera_processor()
