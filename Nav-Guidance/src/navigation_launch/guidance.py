@@ -27,9 +27,9 @@ GUIDANCE_HZ = 10
 # Drivetrain
 #
 
-FAST_SPEED = 1.8  # m/s
+FAST_SPEED = 2  # m/s
 DIST_CUTOFF = 1500  # slow down once we're within 2m of something
-SLOW_SPEED = 1.5
+SLOW_SPEED = 1.6
 RAMP_SPEED = 2
 
 MAX_ROTATION = 90  # max crabbing angle
