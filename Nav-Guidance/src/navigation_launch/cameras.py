@@ -16,6 +16,7 @@ from camera_msg import CameraMsg
 from guidance import contours_to_vectors
 from cameraconfig.config import create_persistent_trackbar
 from util import rx_subscribe, Vec2d
+import os
 
 
 
@@ -412,6 +413,12 @@ def calculate_line_angle(contour):
     return math.degrees(math.atan(slope)),slope,intercept
 
 
+def update_exposure(value):
+    res = os.system('v4l2-ctl --set-ctrl=exposure_auto=1 &&' +
+                    'v4l2-ctl --set-ctrl=exposure_absolute=' + str(value))
+    rospy.loginfo('Updated exposure ' + str(value) + ' ' + str(res))
+
+
 def camera_processor():
 
 
@@ -431,6 +438,8 @@ def camera_processor():
     rospy.init_node('camera')
     rate = rospy.Rate(10)
 
+    exposure_init = False
+
     rawWidth = 640
     rawHeight = 480
     #camera_info = CameraInfo(53,38,76,91,134)#ground level#half (134 inches out)
@@ -440,7 +449,12 @@ def camera_processor():
 
         #grab a frame
         ret_val, img = cam.read()
-	
+
+        # camera will set its own exposure after the first frame, regardless of mode
+        if not exposure_init:
+            update_exposure(cv2.getTrackbarPos('exposure', 'img_HSV'))
+            exposure_init = True
+
         #record a video simultaneously while processing
         if ret_val==True:
             out.write(img)
@@ -583,6 +597,7 @@ if __name__ == '__main__':
     create_persistent_trackbar('highS', 'img_HSV', ihighS, 255)
     create_persistent_trackbar('lowV', 'img_HSV', ilowV, 255)
     create_persistent_trackbar('highV', 'img_HSV', ihighV, 255)
+    create_persistent_trackbar('exposure', 'img_HSV', 3, 255, update_exposure)
 
     cv2.createTrackbar('RlowH', 'Rimg_HSV', RilowH, 255, callback)
     cv2.createTrackbar('RhighH', 'Rimg_HSV', RihighH, 255, callback)
