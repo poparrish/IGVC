@@ -26,7 +26,11 @@ def build_costmap(lidar, camera):
     ret, img = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)
     img = cv2.dilate(img, kernel, iterations=1)
     img = cv2.bitwise_not(img)
-    cv2.circle(img, (MAP_SIZE_PIXELS / 2, MAP_SIZE_PIXELS / 2), dilation / 2, (255,), -1)
+    center = MAP_SIZE_PIXELS / 2
+
+    # make space for pathfinding if we're right next to something
+    i = dilation / 2
+    cv2.rectangle(img, (center - i, center - i), (center, center + i), (255,), -1)
 
     return CostmapData(transform=map_data.transform,
                        costmap_bytes=img,

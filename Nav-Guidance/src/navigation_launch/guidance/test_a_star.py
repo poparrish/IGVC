@@ -27,6 +27,13 @@ class PrioritySetTest(TestCase):
         assert_equal('a' in priority_set, False)
         assert_equal('b' in priority_set, True)
 
+    def test_update(self):
+        priority_set = PrioritySet([(1, 'a'), (2, 'b')])
+        priority_set.push((0, 'b'))
+        assert_equal(priority_set.pop(), 'b')
+        assert_equal(priority_set.pop(), 'a')
+
+
 
 # noinspection PyMethodMayBeStatic
 class AStarTest(TestCase):
@@ -45,7 +52,7 @@ class AStarTest(TestCase):
                          reached_goal=lambda p: p == goal,
                          neighbors=grid_neighbors(grid, jump_size=1),
                          weight=lambda (x, y): float('inf') if grid[y][x] > 0 else 1)
-        assert_equal(path, [(0, 0), (0, 1), (0, 2), (1, 2), (2, 2), (2, 3), (2, 4), (3, 4), (4, 4)])
+        assert_equal(path, [(0, 0), (0, 1), (1, 2), (2, 3), (3, 3), (4, 4)])
 
     def test_no_path(self):
         grid = [
@@ -85,4 +92,4 @@ class AStarTest(TestCase):
                          reached_goal=lambda (x, y): y == goal,
                          neighbors=grid_neighbors(grid, jump_size=1),
                          weight=lambda (x, y): float('inf') if grid[y][x] > 0 else 1)
-        assert_equal(path, [(0, 2), (0, 1), (1, 1), (2, 1), (3, 1), (3, 0)])
+        assert_equal(path, [(0, 2), (1, 1), (2, 1), (3, 0)])

@@ -49,8 +49,10 @@ def calc_attractive_force(attractor, position):
 
 def calc_repulsive_force(repulsor, position, weight):
     repulsor -= position
-    if repulsor.mag <= 1000:
+    if repulsor.mag <= 200:
         f = 0.5 * R_FACTOR * (REPULSOR_THRESHOLD_MM - repulsor.mag) ** 2  # quadratic
+    elif repulsor.mag <= 1000:
+        f = 0.5 * 400 * R_FACTOR * (REPULSOR_THRESHOLD_MM - repulsor.mag)
     else:
         f = 0  # out of range
 

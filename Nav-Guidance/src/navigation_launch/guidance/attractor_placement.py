@@ -14,7 +14,7 @@ from sensor_msgs.msg import PointCloud
 from std_msgs.msg import Header
 
 import topics
-from a_star import find_path, grid_neighbors, euclidean, manhattan
+from a_star import find_path, grid_neighbors, euclidean, manhattan, diagonal
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from util import Vec2d, to360, to180
 
@@ -74,9 +74,9 @@ def generate_path(costmap, heading, (x, y)):
     ideal = Vec2d.from_point(100, y)
     # xrange_ = [Point32(x=find_ideal(v, x, y).x / 50*2.5, y=find_ideal(v, x, y).y / 50*2.5) for v in xrange(360)]
     # xrange_ = [Point32(x=find_ideal(v, x, y).x / 50*2.5, y=find_ideal(v, x, y).y / 50*2.5) for v in [heading]]
-    xrange_ = [Point32(x=(v[0] - 50) / 50.0 * 2.5, y=(v[1] - 50) / 50.0 * 2.5) for v in valid_edges]
-    debug.publish(PointCloud(header=Header(frame_id=topics.MAP_FRAME),
-                             points=xrange_))
+    # xrange_ = [Point32(x=(v[0] - 50) / 50.0 * 2.5, y=(v[1] - 50) / 50.0 * 2.5) for v in valid_edges]
+    # debug.publish(PointCloud(header=Header(frame_id=topics.MAP_FRAME),
+    #                          points=xrange_))
 
     print 'ideal %s' % (ideal,)
     def is_goal(p):
@@ -88,15 +88,15 @@ def generate_path(costmap, heading, (x, y)):
             return float('inf')
 
         if is_goal((x, y)):
-            return abs(ideal[0] - x + ideal[1] - y) * 1.1
+            return abs(ideal.x - x) + abs(ideal.y - y) * 100
 
-        return 1
+        # return 1
+        return euclidean((x, y), (ideal.x, ideal.y))
 
-    center = MAP_SIZE_PIXELS / 2
     path = find_path(start=(x, y),
                      reached_goal=is_goal,
                      neighbors=grid_neighbors(costmap, jump_size=SPACING),
                      weight=weight,
-                     heuristic=lambda v: manhattan(v, ideal))
+                     heuristic=lambda v: diagonal(v, (ideal.x, ideal.y)))
 
     return path

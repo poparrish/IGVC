@@ -269,7 +269,8 @@ def update_control((gps, costmap, pose, line_angle, state)):
             goal = Vec2d(0, ATTRACTOR_THRESHOLD_MM)  # always drive forward
         else:
             point = path[offset]
-            goal = Vec2d.from_point(x_to_m(point[0] + 0.5), y_to_m(point[1] + 0.5))
+            goal = Vec2d.from_point(x_to_m(point[0] + 0.5) - diff.x,
+                                    y_to_m(point[1] + 0.5) - diff.y)
             goal = goal.with_magnitude(ATTRACTOR_THRESHOLD_MM)
         rotation = -line_angle.data  # rotate to follow lines
         if abs(rotation) < 10:
