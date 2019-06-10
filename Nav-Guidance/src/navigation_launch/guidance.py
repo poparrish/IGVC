@@ -13,7 +13,7 @@ from tf2_msgs.msg import TFMessage
 
 import topics
 from guidance import compute_potential
-from guidance.attractor_placement import generate_path, SPACING
+from guidance.attractor_placement import generate_path
 from guidance.gps_guidance import dist_to_waypoint, calculate_gps_heading, current_angle
 from guidance.potential_field import extract_repulsors, ATTRACTOR_THRESHOLD_MM
 from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
@@ -264,13 +264,12 @@ def update_control((gps, costmap, pose, line_angle, state)):
     # calculate theta_dot based on the current state
     if state['state'] == LINE_FOLLOWING or \
             state['state'] == TRACKING_THIRD_WAYPOINT:
-        offset = 10 / SPACING
+        offset = 10
         if len(path) < offset + 1:
             goal = Vec2d(0, ATTRACTOR_THRESHOLD_MM)  # always drive forward
         else:
             point = path[offset]
-            goal = Vec2d.from_point(x_to_m(point[0] + 0.5) - diff.x,
-                                    y_to_m(point[1] + 0.5) - diff.y)
+            goal = Vec2d.from_point(x_to_m(point[0] + 0.5), y_to_m(point[1] + 0.5))
             goal = goal.with_magnitude(ATTRACTOR_THRESHOLD_MM)
         rotation = -line_angle.data  # rotate to follow lines
         if abs(rotation) < 10:

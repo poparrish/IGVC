@@ -1,34 +1,38 @@
-import math
+import heapq
 
-import heapdict
+# TODO: Docs
+import math
 
 
 class PrioritySet:
     """Priority Queue w/ O(1) contains check"""
 
     def __init__(self, elements):
-        self.hd = heapdict.heapdict()
+        self.queue = []
+        self.set = set()
         for element in elements:
             self.push(element)
 
-    def push(self, (priority, item)):
-        self.hd[item] = priority
+    def push(self, item):
+        if item[1] not in self.set:
+            heapq.heappush(self.queue, item)
+            self.set.add(item[1])
 
     def peek(self):
         if len(self) > 0:
-            item, priority = self.hd.peekitem()
-            return item
+            return self.queue[0][1]
 
     def pop(self):
         if len(self) > 0:
-            item, priority = self.hd.popitem()
-            return item
+            item = heapq.heappop(self.queue)
+            self.set.remove(item[1])
+            return item[1]
 
     def __contains__(self, item):
-        return item in self.hd
+        return item in self.set
 
     def __len__(self):
-        return len(self.hd)
+        return len(self.queue)
 
 
 # Heuristics
@@ -39,15 +43,6 @@ def manhattan((x1, y1), (x2, y2)):
 
 def euclidean((x1, y1), (x2, y2)):
     return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
-
-
-# http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html#diagonal-distance
-def diagonal((x1, y1), (x2, y2)):
-    dx = abs(x1 - x2)
-    dy = abs(y1 - y2)
-    d = 1
-    d2 = math.sqrt(2)
-    return d * (dx + dy) + (d2 - 2 * d) * min(dx, dy)
 
 
 # A*
@@ -111,7 +106,7 @@ def grid_neighbors(grid, jump_size=1):
         x_min = x >= jump_size
         y_min = y >= jump_size
         x_max = len(grid) > 0 and x < len(grid[0]) - jump_size
-        y_max = len(grid) > 0 and y < len(grid) - jump_size
+        y_max = y < len(grid) - jump_size
         if x_min: yield (x - jump_size, y)
         if y_min: yield (x, y - jump_size)
         if x_max: yield (x + jump_size, y)
