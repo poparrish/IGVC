@@ -1,9 +1,9 @@
 img_HSV.auto_white: 4844
-img_HSV.exposure: 49
-img_HSV.highH: 41
-img_HSV.highS: 149
-img_HSV.highV: 152
-img_HSV.lowH: 77
-img_HSV.lowS: 32
-img_HSV.lowV: 28
-img_displayFilteredContours.contoursOpeningKernelSize: 10
+img_HSV.exposure: 24
+img_HSV.highH: 43
+img_HSV.highS: 229
+img_HSV.highV: 82
+img_HSV.lowH: 78
+img_HSV.lowS: 145
+img_HSV.lowV: 13
+img_displayFilteredContours.contoursOpeningKernelSize: 5
