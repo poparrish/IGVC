@@ -21,6 +21,8 @@ import os
 
 
 cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
+cam_name = '/dev/video1'
+
 # cam_name = '/home/nregner/IGVC/Nav-Guidance/src/navigation_launch/dev/arcs.avi'
 # cam_name = '/home/nregner/IGVC/Nav-Guidance/src/navigation_launch/test_videos/overcast_noon_bright128.avi'
 #cam_name = '/home/bender/IGVC/Nav-Guidance/src/navigation_launch/speedtest.mp4'
@@ -427,11 +429,14 @@ def calculate_line_angle(contour):
 
 def update_exposure(value):
     res = os.system('v4l2-ctl --device=' + cam_name + ' --set-ctrl=exposure_auto=1 && ' +
-                    'v4l2-ctl --device=' + cam_name + ' --set-ctrl=exposure_absolute=' + str(value) + ' && ' +
-                    'v4l2-ctl --device=' + cam_name + ' --set-ctrl=white_balance_temperature_auto=0 && ' +
-                    'v4l2-ctl --device=' + cam_name + ' --set-ctrl=white_balance_temperature=4900')
+                    'v4l2-ctl --device=' + cam_name + ' --set-ctrl=exposure_absolute=' + str(value))
     rospy.loginfo('Updated exposure ' + str(value) + ' ' + str(res))
 
+
+def update_auto_white(white):
+    res=os.system('v4l2-ctl --device=' + cam_name + ' --set-ctrl=white_balance_temperature_auto=0 && ' +
+                  'v4l2-ctl --device=' + cam_name + ' --set-ctrl=white_balance_temperature=' + str(white))
+    rospy.loginfo('Updated auto_white'+str(white)+' '+str(res))
 
 def camera_processor():
 
@@ -467,6 +472,7 @@ def camera_processor():
         # camera will set its own exposure after the first frame, regardless of mode
         if not exposure_init:
             update_exposure(cv2.getTrackbarPos('exposure', 'img_HSV'))
+            update_auto_white(cv2.getTrackbarPos('auto_white','img_HSV'))
             exposure_init = True
 
         #record a video simultaneously while processing
@@ -612,6 +618,7 @@ if __name__ == '__main__':
     create_persistent_trackbar('lowV', 'img_HSV', ilowV, 255)
     create_persistent_trackbar('highV', 'img_HSV', ihighV, 255)
     create_persistent_trackbar('exposure', 'img_HSV', 3, 255, update_exposure)
+    create_persistent_trackbar('auto_white','img_HSV',0,6000, update_auto_white)
 
     cv2.createTrackbar('RlowH', 'Rimg_HSV', RilowH, 255, callback)
     cv2.createTrackbar('RhighH', 'Rimg_HSV', RihighH, 255, callback)
