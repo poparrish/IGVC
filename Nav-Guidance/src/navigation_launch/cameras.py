@@ -23,7 +23,7 @@ import os
 cam_name = '/dev/v4l/by-id/usb-046d_Logitech_Webcam_C930e_2B2150DE-video-index0'
 # cam_name = '/home/nregner/IGVC/Nav-Guidance/src/navigation_launch/dev/arcs.avi'
 # cam_name = '/home/nregner/IGVC/Nav-Guidance/src/navigation_launch/test_videos/overcast_noon_bright128.avi'
-#cam_name = 1
+#cam_name = '/home/bender/IGVC/Nav-Guidance/src/navigation_launch/speedtest.mp4'
 
 def callback(x):
     #the cv2.createTrackbar() requires callback param
@@ -54,8 +54,8 @@ def process_image(img, camera_info):
 
 
     #HSV filter #1
-    ilowH = cv2.getTrackbarPos('lowH','img_HSV')
-    ihighH = cv2.getTrackbarPos('highH','img_HSV')
+    ilowH = cv2.getTrackbarPos('highH','img_HSV')
+    ihighH = cv2.getTrackbarPos('lowH','img_HSV')
     ilowS = cv2.getTrackbarPos('lowS','img_HSV')
     ihighS = cv2.getTrackbarPos('highS','img_HSV')
     ilowV = cv2.getTrackbarPos('lowV','img_HSV')
@@ -64,7 +64,10 @@ def process_image(img, camera_info):
     sat_threshold=[ilowS,ihighS]
     val_threshold=[ilowV,ihighV]
     img_HSV = hsv_threshold(input=img_medianBlur,hue=hue_threshold,sat=sat_threshold,val=val_threshold)
-    #img_HSV = rgb_threshold(img_medianBlur,hue_threshold,sat_threshold,val_threshold)
+    # img_HSV = rgb_threshold(img_medianBlur,hue_threshold,sat_threshold,val_threshold)
+    img_HSV = hsl_threshold(input=img_medianBlur,h=hue_threshold,l=val_threshold,s=sat_threshold)
+
+
 
     cv2.imshow('img_HSV',img_HSV)
 
@@ -154,6 +157,10 @@ def hsv_threshold(input, hue, sat, val):
 def rgb_threshold(input, r,g,b):
     out = cv2.cvtColor(input, cv2.COLOR_BGR2RGB)
     return cv2.inRange(out, (r[0], g[0], b[0]), (r[1], g[1], b[1]))
+
+def hsl_threshold(input, h,s,l):
+    out = cv2.cvtColor(input, cv2.COLOR_BGR2HLS)
+    return cv2.inRange(out, (h[0], s[0], l[0]), (h[1], s[1], l[1]))
 
 def blur(src, type, radius):
     if (type is BlurType.Box_Blur):
@@ -584,12 +591,12 @@ if __name__ == '__main__':
     # ihighV = 252
 
     # bright 128 sunny (best, sorts into blue hue, exposure at shiniest thing it will see)
-    ilowH = 22
-    ihighH = 156
-    ilowS = 5
-    ihighS = 105
-    ilowV = 92
-    ihighV = 173
+    ilowH = 135
+    ihighH = 255
+    ilowS = 186
+    ihighS = 255
+    ilowV = 172
+    ihighV = 255
 
     RilowH = 114
     RihighH = 149
@@ -615,12 +622,12 @@ if __name__ == '__main__':
 
     # Gaussian Blur
     cv2.namedWindow('img_gaussianBlur')
-    gaussianRadius = 1
+    gaussianRadius = 2
     cv2.createTrackbar('gaussianRadius','img_gaussianBlur',gaussianRadius, 20,callback)
 
     # filter contours
     cv2.namedWindow('img_displayFilteredContours')
-    contoursMinArea = 3200
+    contoursMinArea = 1000
     contoursMinPerimeter = 1
     contoursMinWidth = 0
     contoursMaxWidth = 1000000

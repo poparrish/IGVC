@@ -1,8 +1,8 @@
-img_HSV.exposure: 11
-img_HSV.highH: 44
-img_HSV.highS: 59
-img_HSV.highV: 213
-img_HSV.lowH: 22
+img_HSV.exposure: 13
+img_HSV.highH: 40
+img_HSV.highS: 255
+img_HSV.highV: 61
+img_HSV.lowH: 59
 img_HSV.lowS: 0
-img_HSV.lowV: 145
+img_HSV.lowV: 0
 img_displayFilteredContours.contoursOpeningKernelSize: 3
