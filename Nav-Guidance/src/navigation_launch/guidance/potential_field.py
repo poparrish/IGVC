@@ -1,12 +1,17 @@
+import math
+
+from costmap import COSTMAP_DILATION_M
+from map import UNKNOWN
+from mapping import MAP_SIZE_PIXELS, MAP_SIZE_METERS
 from util import Vec2d, avg
 
 ATTRACTOR_THRESHOLD_MM = 1500
 REPULSOR_THRESHOLD_MM = 1500
 
-R_FACTOR = 1.0 / (500 ** 2)  # 750 is the distance at which the repulsors should start to overpower the attractors
+R_FACTOR = 1.0 / (400 ** 2)  # 750 is the distance at which the repulsors should start to overpower the attractors
 A_FACTOR = 25.0 / (1500 ** 2)  # dumb hack to ensure 25
 
-NOISE_THRESHOLD = 3
+NOISE_THRESHOLD = 5
 
 
 def partition(vecs, cluster_mm):
@@ -44,7 +49,7 @@ def calc_attractive_force(attractor, position):
 
 def calc_repulsive_force(repulsor, position, weight):
     repulsor -= position
-    if repulsor.mag <= REPULSOR_THRESHOLD_MM:
+    if repulsor.mag <= 1000:
         f = 0.5 * R_FACTOR * (REPULSOR_THRESHOLD_MM - repulsor.mag) ** 2  # quadratic
     else:
         f = 0  # out of range
@@ -62,27 +67,42 @@ def sum_repulsors(vecs, position, cluster_mm, weight):
     clusters = partition(vecs, cluster_mm)
     return sum([calc_repulsive_force(r, position, weight) for r in clusters])
 
-def mask_lidar_in_cam(lidar_vec, cam_vec, tol):
-    to_remove = set()
-    for l_v in lidar_vec:
-        for i in xrange(len(cam_vec)):
-            c_v = cam_vec[i]
-            if (c_v.x-tol < l_v.x < c_v.x+tol) and (c_v.y-tol < l_v.y < c_v.y+tol):
-                to_remove.add(i)
-    for ind in sorted(to_remove, reverse = True):
-        del cam_vec[ind]
-    return cam_vec
 
-def calculate_potential(lidar_data, camera_data, goal, position=zero):
-    camera_data = [v for c in camera_data for v in c]
-    # camera_data = mask_lidar_in_cam(lidar_data, camera_data, 50)
+def compute_potential(repulsors, goal, position=zero):
     a = calc_attractive_force(goal, position)
-    rl = sum_repulsors(lidar_data, position, cluster_mm=150, weight=2)
-    rc = sum_repulsors(camera_data, position, cluster_mm=500, weight=2)
-
-    bad_hack = False
-    if bad_hack:
-        return a - rc
+    r = sum_repulsors(repulsors, zero, cluster_mm=150, weight=2)
+    print a, r
+    return a - r
 
 
-    return a - rl - rc
+def trace_ray(grid, x, y, prob_threshold, angle):
+    x_inc = math.cos(math.radians(angle))
+    y_inc = math.sin(math.radians(angle))
+
+    start_x = x
+    start_y = y
+
+    while 0 <= int(x) < MAP_SIZE_PIXELS and 0 <= int(y) < MAP_SIZE_PIXELS:
+        val = grid[int(y)][int(x)]
+        if val < prob_threshold and val != UNKNOWN:
+            return math.sqrt((x - start_x) ** 2 + (y - start_y) ** 2)
+        x += x_inc
+        y -= y_inc
+
+    return None
+
+
+def extract_repulsors((x, y), grid):
+    pose = Vec2d.from_point(x, y)
+    scale = (MAP_SIZE_PIXELS / 2.0) / (MAP_SIZE_METERS / 2.0)
+    x = int((MAP_SIZE_PIXELS / 2.0) + pose.x * scale)
+    y = int((MAP_SIZE_PIXELS / 2.0) - pose.y * scale)
+
+    repulsors = []
+    for i in xrange(360):
+        ray = trace_ray(grid, x, y, 80, i)
+        if ray is not None:
+            v = Vec2d(i, ray * 1000.0 / MAP_SIZE_PIXELS * MAP_SIZE_METERS)
+            repulsors.append(v)
+
+    return repulsors

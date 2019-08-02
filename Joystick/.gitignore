@@ -1,0 +1,210 @@
+.ICEauthority
+.IdeaIC2018.2/
+.PyCharmCE2018.1/
+.Xauthority
+.apport-ignore.xml
+.arduino/
+.arduino15/
+.bash_history
+.bash_logout
+.bashrc
+.cache/
+.codeblocks/
+.compiz/
+.config/
+.cr3/
+.dbus/
+.dmrc
+.eclipse/
+.gazebo/
+.gimp-2.8/
+.gitconfig
+.gitmodules
+.gnome/
+.gnupg/
+.gradle/
+.gtktermrc
+.java/
+.jssc/
+.local/
+.macromedia/
+.mozilla/
+.nano/
+.nv/
+.oh-my-zsh/
+.oracle_jre_usage/
+.p2/
+.pki/
+.profile
+.pulse-cookie
+.pypar2/
+.ros/
+.sdformat/
+.ssh/
+.steam/
+.steampath
+.steampid
+.sudo_as_admin_successful
+.swt/
+.teensy
+.thumbnails/
+.thunderbird/
+.tooling/
+.vim/
+.viminfo
+.virtualenvs/
+.wget-hsts
+.wine/
+.xsession-errors
+.xsession-errors.old
+.zcompdump
+.zcompdump-bender-5.1.1
+.zsh_history
+.zshrc
+.zshrc.pre-oh-my-zsh
+Analysis.odt
+Arduino/
+Desktop/
+Documents/
+Downloads/.~lock.2018 - Ch 1.ppt#
+Downloads/.~lock.2018 - Ch 4 (1).ppt#
+Downloads/.~lock.2018 - Ch 6.ppt#
+Downloads/.~lock.2018 - Exam 1 Review (2).doc#
+Downloads/.~lock.2018 - Info Speech Assignment - 003 (1).doc#
+Downloads/.~lock.2018 - Persuasive Speech Teams - 003 (1).doc#
+Downloads/.~lock.SU2018 - Final Exam Review(1) (1).doc#
+Downloads/.~lock.SU2018 - Final Exam Review(1).doc#
+Downloads/.~lock.SampleAnalysis.odt#
+Downloads/20181119_113439.jpg
+Downloads/20181206_103508.jpg
+Downloads/3517.PDF
+Downloads/3SpaceLX.xml
+Downloads/3SpaceUSB2.xml
+Downloads/Adafruit_BNO055-master.zip
+Downloads/Adafruit_Sensor-master.zip
+Downloads/ArrayList/
+Downloads/AutoDock-master (1).zip
+Downloads/AutoDock-master (2).zip
+Downloads/AutoDock-master.zip
+Downloads/AutoDock-master/
+Downloads/AutoDock-sim (1).zip
+Downloads/AutoDock-sim (2).zip
+Downloads/AutoDock-sim (3).zip
+Downloads/AutoDock-sim.zip
+Downloads/AutoDock-sim/
+Downloads/Autodesk_EAGLE_9.2.0_English_Linux_64bit.tar.gz
+Downloads/Bender's Power System.sch
+Downloads/Bender(post_route).brd
+Downloads/Bender(post_route).sch
+Downloads/Bender(post_route)_2018-11-05.zip
+Downloads/Bender(post_route_v2).s##
+Downloads/Bender(post_route_v2).s#1
+Downloads/Bender(post_route_v2).sch
+Downloads/BenderVectorControl-master (1).zip
+Downloads/BenderVectorControl-master.zip
+Downloads/BenderVectorControl-master/.gitignore
+Downloads/CircuitTracer (1).zip
+Downloads/CircuitTracer.zip
+Downloads/Devguide-master.zip
+Downloads/Devguide-master/
+Downloads/GazeboGimbal.plan.zip
+Downloads/Hitch-Hikers Guide To The Galaxy/
+Downloads/IUDoubleLinkedList (1).java
+Downloads/IUDoubleLinkedList.java
+Downloads/IUSLL.zip
+Downloads/IUSLL/
+Downloads/Kadis_ACRA_2010_Final.pdf
+Downloads/ListTester (1).java
+Downloads/ListTester.java
+Downloads/NVIDIA-DRIVER.run
+Downloads/PENS+WHEEL+-+MPU6050.txt
+Downloads/PENS+WHEEL+Motor.txt
+Downloads/Project04.rar
+Downloads/Pscreen With Pyglet and Pygame Installer.zip
+Downloads/Python-2.7.13/
+Downloads/Quicksort.zip
+Downloads/Slipknot - All Out Life (Single) (2018)/
+Downloads/Stevetestrpmcontrol/
+Downloads/arc-theme_1488477732.766ae1a-0_all.deb
+Downloads/arduino-1.8.5/
+Downloads/avogadro-1.2.0.tar.gz
+Downloads/banks,iain_m-culture_05-excession/
+Downloads/basic_localization_stage (1).bag
+Downloads/basic_localization_stage.bag
+Downloads/codeblocks_17.12-1_amd64_stable.tar.xz
+Downloads/eCalc Results.csv
+Downloads/eagle-9.2.0/
+Downloads/intellij/
+Downloads/m333_q10_s.pdf
+Downloads/m333_q1_s.pdf
+Downloads/m333_q2_s.pdf
+Downloads/m333_q3_s.pdf
+Downloads/m333_q4_s.pdf
+Downloads/m333_q5_s.pdf
+Downloads/m333_q6_s.pdf
+Downloads/m333_q7_s.pdf
+Downloads/m333_q8_s.pdf
+Downloads/m333_q9_s.pdf
+Downloads/m333_t1_s.pdf
+Downloads/m333_t2_s.pdf
+Downloads/m333_t3_s.pdf
+Downloads/numba-0.39.0/
+Downloads/openbabel-2.3.1.tar.gz
+Downloads/order_entry.png
+Downloads/pixymon/
+Downloads/potential.pdf
+Downloads/px4flow_manual_v1.3.pdf
+Downloads/pyCharm/
+Downloads/qbittorrent-4.1.1/
+Downloads/quiver3d_demo.py
+Downloads/rc_simulator_node (1).txt
+Downloads/rc_simulator_node.txt
+Downloads/rospy_tutorials-master.zip
+Downloads/schematic.png
+Downloads/sdformat-4.0.0 (1).tar.bz2
+Downloads/sdformat-4.0.0.tar.bz2
+Downloads/sdformat-6.0.0.tar.bz2
+Downloads/sublime_text_3/
+Downloads/sublime_text_3_build_3176_x64.tar.bz2
+Downloads/thoughts_.png
+Downloads/todo.png
+Downloads/tuxcut_5.1_all.deb
+Downloads/ubuntu-16.04.5-desktop-amd64.iso
+Downloads/ubuntu_sim.sh
+Downloads/ubuntu_sim_ros_gazebo.sh
+Downloads/unix.pdf
+Downloads/yei-3-space-python-api-examples.zip
+EAGLE/
+IGVC/
+IdeaProjects/
+LTWheelConf/
+Music/
+Pictures/
+PycharmProjects/
+Release.key
+buspirate steps
+catkin_ws/
+catkin_ws_lunar/
+dwhelper/
+eProsima_FastCDR-1.0.7-Linux/
+eProsima_FastRTPS-1.5.0-Linux/
+eclipse/
+examples.desktop
+firefox/
+frames.gv
+frames.pdf
+getDev.sh
+hs_err_pid6946.log
+java_error_in_PYCHARM_.log
+kickthemout/
+loggingteensy hub
+pixy/
+pointRotation.py
+px4/
+rosgraph.png
+schedule version1.pdf
+simulation.md
+sketchbook/
+snap/
+src/
+venv/

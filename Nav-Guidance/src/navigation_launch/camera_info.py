@@ -8,32 +8,30 @@ A known distance to the closest thing the camera can see
 the width that is seen at that closest distance
 a known distance to the "mioddle" of the screen (halfway up what is seen)
 a knowd width that is seen at that middle
-It then does 
+It then be wizard
 '''
 
 
 class CameraInfo:
-    def __init__(self, h, d1, w1, d2, w2):
+    def __init__(self, h, d1, w1, d2, w2,fx,fy):
         self.height = h
         self.closedist = d1
         self.closewidth = w1
         self.middist = d2
         self.midwidth = w2
-        self.per_inch = 4
-        self.map_height = (self.middist - self.closedist) * self.per_inch
-        self.map_width = self.midwidth * self.per_inch 
+        self.per_inch = 1
+        self.map_height = fy
+        self.map_width = fx
         self.trim = int(((float(self.midwidth - self.closewidth)/2)/float(self.middist - self.closedist))*self.map_height)
-    
+        self.rectangle_height = int(.88*self.map_height)#number is ratio for how far down the frame rectangle should start
+
     def convertToFlat(self, image):
-        wx = len(image[0])
-        hy = len(image)
-        pts_src = np.float32([[0, int(hy*.33)], [wx, int(hy*.33)], [0, hy], [wx, hy]])
+        pts_src = np.float32([[0, int(self.map_height)], [self.map_width, int(self.map_height)], [0, 0], [self.map_width, 0]])
         left_trim = self.trim
-        #print(left_trim)
         right_trim = self.map_width - self.trim
-        pts_dst = np.float32([[0, 0],[self.map_width,0],[left_trim, self.map_height],[right_trim, self.map_height]])
+        pts_dst = np.float32([[left_trim, self.map_height],[right_trim, self.map_height],[0, 0],[self.map_width,0]])
         mtx = cv2.getPerspectiveTransform(pts_src,pts_dst)
         flat_map = cv2.warpPerspective(image, mtx, (self.map_width, self.map_height))
-        cv2.rectangle(flat_map, (115,135), (300,200), (0,0,0), -1) 
+        cv2.rectangle(flat_map, (60+left_trim,self.rectangle_height), (right_trim-60,self.map_height), (0,0,0), -1)#occlude bender chassis
         return flat_map
 

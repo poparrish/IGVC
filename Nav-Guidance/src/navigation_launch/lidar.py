@@ -1,43 +1,31 @@
 #!/usr/bin/env python
 import pickle
-
 import time
+
 import rospy
-from rplidar import RPLidar, MAX_MOTOR_PWM
+from rplidar import RPLidar, MAX_MOTOR_PWM, RPLidarException
 from std_msgs.msg import String
 
-from util import clamp360, Vec2d
+import topics
+from util import Vec2d
 
-LIDAR_NODE = 'LIDAR'
-
-MIN_DIST_MM = 100
-MAX_DIST_MM = 2000
-
-ANGLE_IGNORE_START = 90 + 20
-ANGLE_IGNORE_END = 270 - 20
-
-LIDAR_OFFSET_ANGLE = 180  # lidar is backward
+MIN_DIST_MM = 500
+MAX_DIST_MM = 10000
+LIDAR_OFFSET_MM = 450  # offset from center
 
 
 def create_vector((quality, angle, dist)):
-    angle = clamp360(angle + LIDAR_OFFSET_ANGLE)
-    valid_angle = not ANGLE_IGNORE_START <= angle <= ANGLE_IGNORE_END
-    valid_distance = MIN_DIST_MM < dist < MAX_DIST_MM
-    if valid_angle and valid_distance:
-        return Vec2d(angle, dist)
+    d = Vec2d(angle, dist)
+    return Vec2d.from_point(-d.x, d.y)  # lidar is backwards, invert x
 
 
 def convert_scan_to_vectors(scan):
-    to_return = [v for v in map(create_vector, scan) if v is not None]
-    for v in to_return:
-        angle = v.angle
-        if angle > 345 or angle < 15:
-            print v
-    return to_return
+    return [v for v in map(create_vector, scan) if v is not None]
+
 
 def start_lidar(device):
-    rospy.init_node(LIDAR_NODE)
-    pub = rospy.Publisher(LIDAR_NODE, String, queue_size=1)
+    rospy.init_node('lidar')
+    pub = rospy.Publisher(topics.LIDAR, String, queue_size=1)
 
     lidar = RPLidar(device)
     lidar.stop_motor()
@@ -56,4 +44,16 @@ def start_lidar(device):
 
 
 if __name__ == '__main__':
-    start_lidar('/dev/lidar')
+    # lidar randomly fails to start with "incorrect starting bytes descriptor" error
+    # retry a few times
+    error = None
+    for x in xrange(3):
+        try:
+            error = None
+            start_lidar('/dev/lidar')
+        except RPLidarException as e:
+            error = e
+            rospy.logwarn('Failed to start lidar, trying again: %s', e)
+
+    if error is not None:
+        raise error

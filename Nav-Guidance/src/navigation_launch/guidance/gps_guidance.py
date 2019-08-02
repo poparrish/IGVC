@@ -24,6 +24,14 @@ def calculate_gps_heading(loc, waypoint):
     is the distance between two GPS coordinates"""
 
     dist = dist_to_waypoint(loc, waypoint)
-    angle = initial_bearing((loc['lat'], loc['lon']), waypoint) - loc['heading']
+    angle = initial_bearing((loc['lat'], loc['lon']), waypoint) - loc['gps_heading']
 
     return Vec2d(angle, dist)
+
+def current_angle(loc):
+    """just returns the current angle from pixhawk"""
+    return loc['pitch']
+
+def current_roll(loc):
+    """just returns the current roll from pixhawk"""
+    return loc['roll']

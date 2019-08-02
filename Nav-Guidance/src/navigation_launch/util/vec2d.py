@@ -8,11 +8,10 @@ def to180(angle):
     return angle
 
 
-def clamp360(angle):
-    angle %= 360
+def to360(angle):
     if angle < 0:
-        angle += 360
-    return angle
+        angle = (angle % -360) + 360
+    return angle % 360
 
 
 def avg(coll):
@@ -23,7 +22,7 @@ class Vec2d:
     """Immutable 2d vector. Overloads most common operators."""
 
     def __init__(self, angle, mag):
-        self.angle = clamp360(angle)
+        self.angle = to360(angle)
         self.mag = mag
 
     @property
@@ -40,7 +39,7 @@ class Vec2d:
         return Vec2d(angle, math.sqrt(x ** 2 + y ** 2))
 
     def with_angle(self, angle):
-        return Vec2d(clamp360(angle), self.mag)
+        return Vec2d(angle, self.mag)
 
     def with_magnitude(self, mag):
         if mag < 0:
@@ -66,7 +65,7 @@ class Vec2d:
         return self * -1
 
     def __str__(self):
-        return "(%s, %s)" % (self.angle, self.mag)
+        return "angle=%s, mag=%s" % (self.angle, self.mag)
 
     def __repr__(self):
         return self.__str__()

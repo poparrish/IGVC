@@ -1,0 +1,30 @@
+<launch>
+    <node name="cameras" pkg="navigation_launch" type="cameras.py" respawn="true" output="screen"/>
+    <node name="gps" pkg="navigation_launch" type="gps.py" respawn="true" />
+    <node name="guidance" pkg="navigation_launch" type="guidance.py" respawn="true" output="screen"/>
+    <node name="TeensyWrite_node" pkg="navigation_launch" type="TeensyWrite_node.py" respawn="true" />
+<!--    <node name="compass_node" pkg="navigation_launch" type="compass_node.py" />-->
+
+<!--
+    <node pkg="rplidar_ros" type="rplidarNode" name="rplidar">
+        <param name="serial_port" value="/dev/lidar"/>
+        <param name="angle_compensate" type="bool" value="true"/>
+        <param name="frame_id" value="laser_frame"/>
+        <param name="inverted" type="bool" value="true"/>
+    </node>
+-->
+
+    <node name="lidar" pkg="navigation_launch" type="lidar.py" respawn="true" />
+    <node name="lidar_mapping" pkg="navigation_launch" type="mapping_lidar.py" respawn="true" />
+    <node name="camera_mapping" pkg="navigation_launch" type="mapping_camera.py" respawn="true" />
+    <node name="costmap" pkg="navigation_launch" type="costmap.py" respawn="true" />
+<!--    <node name="potential_field" pkg="navigation_launch" type="navigation_launch_potential_field" />-->
+
+<!--
+    <node pkg="tf" type="static_transform_publisher" name="laser_broadcaster"
+          args="0 0 0 3.14 0 0 base_link laser_frame 100" output="screen"/>
+-->
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(dirname)/config.rviz"/>
+</launch>
+

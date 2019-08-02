@@ -1,9 +1,0 @@
-<launch>
-    <node name="cameras" pkg="navigation_launch" type="cameras.py" />
-    <node name="gps" pkg="navigation_launch" type="gps.py" />
-    <node name="guidance" pkg="navigation_launch" type="guidance.py" />
-    <node name="lidar" pkg="navigation_launch" type="lidar.py" />
-    <node name="nav" pkg="navigation_launch" type="nav.py" />
-    <node name="Control_Node" pkg="navigation_launch" type="Control_Node.py" />
-</launch>
-

@@ -1,0 +1,5 @@
+<launch>
+	<node pkg="joy" type="joy_node" name="joy" output="screen"/>
+	<node name="VectorQueue_node" pkg="joystick_controls" type="VectorCalcDualStick_node.py" output="screen"/>
+	<node name="TeensyWrite_node" pkg="joystick_controls" type="TeensyWriteManual_node.py"/>
+</launch>

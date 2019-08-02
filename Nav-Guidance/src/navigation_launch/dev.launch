@@ -1,0 +1,15 @@
+<launch>
+    <node name="costmap" pkg="navigation_launch" type="costmap.py" />
+    <node name="lidar_mapping" pkg="navigation_launch" type="mapping_lidar.py"/>
+    <node name="camera_mapping" pkg="navigation_launch" type="mapping_camera.py"/>
+    <node name="guidance" pkg="navigation_launch" type="guidance.py" output="screen" />
+
+    <node name="odometry" pkg="navigation_launch" type="fake_odom.py"  />
+    <node name="gps" pkg="navigation_launch" type="fake_gps.py"  />
+
+    <!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/2019-01-27-14-47-19-lidar-odometry.bag"/>-->
+<!--    <node pkg="rosbag" type="play" name="player" args="-l $(dirname)/dev/2019-02-25-17-25-50.bag"/>-->
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(dirname)/config.rviz"/>
+</launch>
+
