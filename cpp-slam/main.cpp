@@ -2,7 +2,7 @@
 #include <vector>
 #include "Vec2d.h"
 #include "feature_extraction.h"
-#include "matplotlib-cpp/matplotlibcpp.h"
+#include "../extern/matplotlib-cpp/matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 
 struct Point {

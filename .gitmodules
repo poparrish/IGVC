@@ -4,3 +4,6 @@
 [submodule "lib/BreezyLidar"]
 	path = lib/BreezyLidar
 	url = https://github.com/simondlevy/BreezyLidar
+[submodule "extern/matplotlib-cpp"]
+	path = extern/matplotlib-cpp
+	url = https://github.com/lava/matplotlib-cpp
