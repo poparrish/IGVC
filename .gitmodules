@@ -7,3 +7,12 @@
 [submodule "extern/matplotlib-cpp"]
 	path = extern/matplotlib-cpp
 	url = https://github.com/lava/matplotlib-cpp
+[submodule "Nav-Guidance/catch_ros"]
+	path = Nav-Guidance/src/catch_ros
+	url = https://github.com/AIS-Bonn/catch_ros
+[submodule "Nav-Guidance/rplidar_ros"]
+	path = Nav-Guidance/src/rplidar_ros
+	url = https://github.com/robopeak/rplidar_ros
+[submodule "Nav-Guidance/extern/matplotlib-cpp"]
+	path = Nav-Guidance/extern/matplotlib-cpp
+	url = https://github.com/lava/matplotlib-cpp

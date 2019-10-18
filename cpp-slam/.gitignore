@@ -1,7 +1,0 @@
-.idea/
-*.iml
-cmake-build-debug
-*.cmake
-CMakeCache.txt
-Makefile
-slam
