@@ -1,5 +1,5 @@
 heapdict==1.0.0
-PyYAML==3.11
+PyYAML==5.1
 pyserial==3.0.1
 nose==1.3.7
 future==0.16.0
