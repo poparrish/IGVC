@@ -1,6 +1,3 @@
 [submodule "lib/BreezySLAM"]
 	path = lib/BreezySLAM
 	url = https://github.com/simondlevy/BreezySLAM
-[submodule "lib/BreezyLidar"]
-	path = lib/BreezyLidar
-	url = https://github.com/simondlevy/BreezyLidar
