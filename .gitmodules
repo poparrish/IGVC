@@ -1,3 +1,12 @@
 [submodule "lib/BreezySLAM"]
 	path = lib/BreezySLAM
 	url = https://github.com/simondlevy/BreezySLAM
+[submodule "Nav-Guidance/extern/matplotlib-cpp"]
+	path = Nav-Guidance/extern/matplotlib-cpp
+	url = https://github.com/lava/matplotlib-cpp.git
+[submodule "Nav-Guidance/src/catch_ros"]
+	path = Nav-Guidance/src/catch_ros
+	url = https://github.com/AIS-Bonn/catch_ros.git
+[submodule "Nav-Guidance/src/rplidar_ros"]
+	path = Nav-Guidance/src/rplidar_ros
+	url = https://github.com/robopeak/rplidar_ros.git
