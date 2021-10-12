@@ -6,7 +6,7 @@ future==0.16.0
 gpxpy==1.2.0
 lxml==4.2.1
 numpy==1.14.3
-opencv-python==3.4.1.15
+opencv-python==3.4.7.28
 pbr==4.0.2
 parameterized==0.7.0
 pymavlink==2.2.8
